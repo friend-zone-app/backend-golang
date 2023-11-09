@@ -19,12 +19,12 @@ import (
 func (r *mutationResolver) UpdateUser(ctx context.Context, updateUser customTypes.UpdateUserArgs) (bool, error) {
 	objectID, err := primitive.ObjectIDFromHex(updateUser.Query)
 	if err != nil {
-		errorHandler.HandleError(401, "Invalid Query user's ID.")
+		errorHandler.HandleError(ctx, 401, "Invalid Query user's ID.")
 	}
 
 	err = database.UpdateUser(objectID, updateUser)
 	if err != nil {
-		errorHandler.HandleError(500, "Unable to update user.")
+		errorHandler.HandleError(ctx, 500, "Unable to update user.")
 	}
 
 	return true, nil

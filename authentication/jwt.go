@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"log"
 	"net/http"
 	"parties-app/backend/config"
 	"parties-app/backend/database"
@@ -92,7 +91,7 @@ func ParseRefreshToken(tokenStr string) (*types.SignedDetails, bool, *string) {
 
 func JwtMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		token, err := validateHeaders(c.GetHeader("Authorization"))
+		token, err := ValidateHeaders(c.GetHeader("Authorization"))
 		if err != nil {
 			errorHandler.Unauthorized(c, http.StatusBadRequest, errorHandler.AuthorizationKeyNotFound)
 			return
@@ -115,8 +114,7 @@ func JwtMiddleware() gin.HandlerFunc {
 	}
 }
 
-func validateHeaders(header string) (*string, *string) {
-	log.Println(header)
+func ValidateHeaders(header string) (*string, *string) {
 	if !strings.HasPrefix(header, "Bearer") {
 		return nil, &errorHandler.InvalidMethod
 	}

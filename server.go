@@ -3,6 +3,7 @@ package main
 //go:generate go run hooks/bson.go
 
 import (
+	"parties-app/backend/directives"
 	"parties-app/backend/graph/generated"
 	graph "parties-app/backend/graph/resolvers"
 	"parties-app/backend/middleware"
@@ -13,7 +14,11 @@ import (
 )
 
 func graphqlHandler() gin.HandlerFunc {
-	srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: &graph.Resolver{}}))
+	config := generated.Config{Resolvers: &graph.Resolver{}}
+
+	config.Directives.IsAuthenticated = directives.IsAuthenticated
+
+	srv := handler.NewDefaultServer(generated.NewExecutableSchema(config))
 
 	return func(c *gin.Context) {
 		srv.ServeHTTP(c.Writer, c.Request)

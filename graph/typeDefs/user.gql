@@ -1,5 +1,7 @@
 scalar Time
 
+directive @isAuthenticated on FIELD_DEFINITION
+
 """date"""
 type Event {
   _id: ID!
@@ -98,24 +100,24 @@ type UserRes {
 }
 
 type Query {
-  getUserById(_id: ID!): SensoredUser!
-  getUserByName(username: String!): SensoredUser!
-  me: User!
+  getUserById(_id: ID!): SensoredUser! @isAuthenticated()
+  getUserByName(username: String!): SensoredUser! @isAuthenticated()
+  me: User! @isAuthenticated()
   requestLogin(email: String!): Boolean!
   validateOtp(code: String!): UserRes!
-  logout: Boolean!
-  refreshToken: Tokens!
-  getEvents(username: String!, duration: String): [Event]!
-  getEventById(username: String!, id: String!): Event!
-  getLocationData(lat: String!, long: String!): Location!
+  logout: Boolean! @isAuthenticated()
+  refreshToken: Tokens! @isAuthenticated()
+  getEvents(username: String!, duration: String): [Event]! @isAuthenticated()
+  getEventById(username: String!, id: String!): Event! @isAuthenticated()
+  getLocationData(lat: String!, long: String!): Location! @isAuthenticated()
 }
 
 type Mutation {
-  updateUser(updateUser: UpdateUserArgs!): Boolean!
+  updateUser(updateUser: UpdateUserArgs!): Boolean! @isAuthenticated()
   signup(createUser: CreateUserArgs!): User!
-  updateDate(updateDate: UpdateDateInput!): Boolean!
-  removeDate(removeDate: RemoveDateInput!): Boolean!
-  createDate(createDate: CreateDateInput!): Boolean!
+  updateDate(updateDate: UpdateDateInput!): Boolean! @isAuthenticated()
+  removeDate(removeDate: RemoveDateInput!): Boolean! @isAuthenticated()
+  createDate(createDate: CreateDateInput!): Boolean! @isAuthenticated()
 }
 
 input UpdateUserArgs {

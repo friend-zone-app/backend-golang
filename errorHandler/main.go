@@ -1,7 +1,11 @@
 package errorHandler
 
 import (
+	"context"
 	"fmt"
+
+	"github.com/99designs/gqlgen/graphql"
+	"github.com/gin-gonic/gin"
 )
 
 var (
@@ -17,6 +21,17 @@ var (
 	RefreshToken             = "Access token expired, please refresh the token!"
 )
 
-func HandleError(statusCode int, message string) error {
+func HandleError(ctx context.Context, statusCode int, message string) {
+	graphql.AddErrorf(ctx, fmt.Sprintf("[%v] %v", statusCode, message))
+}
+
+func ValidateErrorMessage(statusCode int, message string) error {
 	return fmt.Errorf("[%v] %v", statusCode, message)
+}
+
+func Unauthorized(c *gin.Context, statusCode int, message string) {
+	c.JSON(statusCode, gin.H{
+		"status":  statusCode,
+		"message": message,
+	})
 }
