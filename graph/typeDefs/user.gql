@@ -1,0 +1,162 @@
+scalar Time
+
+"""date"""
+type Event {
+  _id: ID!
+  author: String!
+  title: String!
+  location: String!
+  time: Float!
+  createdAt: Time!
+  inviters: [String!]
+  cancelled: Boolean!
+  expireIn: Float!
+}
+
+"""user"""
+type User {
+  _id: ID!
+  displayName: String!
+  username: String!
+  password: String!
+  email: String!
+  biography: String
+  avatar: String
+  createdAt: Time!
+  salt: String!
+  refreshToken: String!
+  events: [String!]!
+}
+
+"""sensoredUser"""
+type SensoredUser {
+  _id: ID!
+  displayName: String!
+  username: String!
+  email: String!
+  biography: String
+  avatar: String
+  events: [String!]!
+}
+
+"""Tokens"""
+type Tokens {
+  accessToken: String!
+  refreshToken: String!
+}
+
+"""Interception"""
+type Interception {
+  baseStreet: String!
+  secondaryStreet1: String!
+  intersectionType: String!
+  displayName: String!
+}
+
+"""Address"""
+type Address {
+  addressLine: String!
+  adminDistrict: String!
+  adminDistrict2: String!
+  countryRegion: String!
+  formattedAddress: String!
+  intersection: Interception!
+  locality: String!
+  postalCode: String!
+  countryRegionIso2: String!
+}
+
+"""Geocodepoint"""
+type GeocodePoint {
+  type: String!
+  coordinates: [Float!]!
+  calculationMethod: String!
+  usageTypes: [String!]!
+}
+
+"""Point"""
+type Point {
+  type: String!
+  coordinates: [Float!]!
+}
+
+"""Location"""
+type Location {
+  bbox: [Float!]!
+  name: String!
+  point: Point!
+  address: Address!
+  confidence: String!
+  entityType: String!
+  geocodePoint: GeocodePoint!
+  matchCodes: [String!]!
+}
+
+type UserRes {
+  user: User!
+  token: Tokens!
+}
+
+type Query {
+  getUserById(_id: ID!): SensoredUser!
+  getUserByName(username: String!): SensoredUser!
+  me: User!
+  requestLogin(email: String!): Boolean!
+  validateOtp(code: String!): UserRes!
+  logout: Boolean!
+  refreshToken: Tokens!
+  getEvents(username: String!, duration: String): [Event]!
+  getEventById(username: String!, id: String!): Event!
+  getLocationData(lat: String!, long: String!): Location!
+}
+
+type Mutation {
+  updateUser(updateUser: UpdateUserArgs!): Boolean!
+  signup(createUser: CreateUserArgs!): User!
+  updateDate(updateDate: UpdateDateInput!): Boolean!
+  removeDate(removeDate: RemoveDateInput!): Boolean!
+  createDate(createDate: CreateDateInput!): Boolean!
+}
+
+input UpdateUserArgs {
+  query: String!
+  username: String
+  password: String
+  email: String
+  biography: String
+  avatar: String
+  salt: String
+  refreshToken: String
+}
+
+input CreateUserArgs {
+  username: String!
+  password: String!
+  email: String!
+}
+
+input UpdateDateInput {
+  query: String!
+  author: String
+  title: String
+  time: Float
+  inviters: [String!]
+  cancelled: Boolean
+  expireIn: Float
+}
+
+input RemoveDateInput {
+  username: String!
+  id: String!
+}
+
+
+
+input CreateDateInput {
+  title: String!
+  time: Float!
+  inviters: [String!]
+  cancelled: Boolean
+  expireIn: Float
+  location: String!
+}
