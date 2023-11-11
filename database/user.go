@@ -1,7 +1,10 @@
 package database
 
 import (
+	"crypto/rand"
+	"math/big"
 	"parties-app/backend/graph/customTypes"
+	"strings"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -86,4 +89,52 @@ func UpdateUser(userId primitive.ObjectID, newUser customTypes.UpdateUserArgs) e
 	}
 
 	return nil
+}
+
+func CreateARandomUsername(username string) (string, error) {
+	newUsername := strings.ReplaceAll(username, " ", "")
+
+	for {
+		randomIdentifier, err := generateRandomIdentifier(3)
+		if err != nil {
+			return "", err
+		}
+		randomSeperator, err := getRandomSeparator()
+		if err != nil {
+			return "", err
+		}
+		proposedUsername := newUsername + randomSeperator + randomIdentifier
+		count, err := UserCollection.CountDocuments(Context, bson.M{"username": proposedUsername})
+		if err != nil {
+			return "", err
+		}
+		if count == 0 {
+			return proposedUsername, nil
+		}
+	}
+}
+
+func generateRandomIdentifier(length int) (string, error) {
+	const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	result := make([]byte, length)
+	_, err := rand.Read(result)
+	if err != nil {
+		return "", err
+	}
+	for i := range result {
+		result[i] = charset[int(result[i])%len(charset)]
+	}
+	return string(result), nil
+}
+
+func getRandomSeparator() (string, error) {
+	separators := []string{".", "-", "_"}
+
+	// Generate a random index using crypto/rand
+	randomIndex, err := rand.Int(rand.Reader, big.NewInt(int64(len(separators))))
+	if err != nil {
+		return "", err
+	}
+
+	return separators[randomIndex.Int64()], err
 }

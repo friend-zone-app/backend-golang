@@ -4,6 +4,8 @@ package customTypes
 
 import (
 	"time"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // Address
@@ -36,15 +38,15 @@ type CreateUserArgs struct {
 
 // date
 type Event struct {
-	ID        string    `json:"_id" bson:"_id"`
-	Author    string    `json:"author" bson:"author"`
-	Title     string    `json:"title" bson:"title"`
-	Location  string    `json:"location" bson:"location"`
-	Time      float64   `json:"time" bson:"time"`
-	CreatedAt time.Time `json:"createdAt" bson:"createdAt"`
-	Inviters  []string  `json:"inviters,omitempty" bson:"inviters"`
-	Cancelled bool      `json:"cancelled" bson:"cancelled"`
-	ExpireIn  float64   `json:"expireIn" bson:"expireIn"`
+	ID        primitive.ObjectID `json:"_id" bson:"_id"`
+	Author    string             `json:"author" bson:"author"`
+	Title     string             `json:"title" bson:"title"`
+	Location  string             `json:"location" bson:"location"`
+	Time      float64            `json:"time" bson:"time"`
+	CreatedAt time.Time          `json:"createdAt" bson:"createdAt"`
+	Inviters  []string           `json:"inviters,omitempty" bson:"inviters"`
+	Cancelled bool               `json:"cancelled" bson:"cancelled"`
+	ExpireIn  float64            `json:"expireIn" bson:"expireIn"`
 }
 
 // Geocodepoint
@@ -88,13 +90,13 @@ type RemoveDateInput struct {
 
 // sensoredUser
 type SensoredUser struct {
-	ID          string   `json:"_id" bson:"_id"`
-	DisplayName string   `json:"displayName" bson:"displayName"`
-	Username    string   `json:"username" bson:"username"`
-	Email       string   `json:"email" bson:"email"`
-	Biography   *string  `json:"biography,omitempty" bson:"biography"`
-	Avatar      *string  `json:"avatar,omitempty" bson:"avatar"`
-	Events      []string `json:"events" bson:"events"`
+	ID          primitive.ObjectID `json:"_id" bson:"_id"`
+	DisplayName string             `json:"displayName" bson:"displayName"`
+	Username    string             `json:"username" bson:"username"`
+	Email       string             `json:"email" bson:"email"`
+	Biography   *string            `json:"biography,omitempty" bson:"biography"`
+	Avatar      *string            `json:"avatar,omitempty" bson:"avatar"`
+	Events      []string           `json:"events,omitempty" bson:"events"`
 }
 
 // Tokens
@@ -120,23 +122,21 @@ type UpdateUserArgs struct {
 	Email        *string `json:"email,omitempty" bson:"email"`
 	Biography    *string `json:"biography,omitempty" bson:"biography"`
 	Avatar       *string `json:"avatar,omitempty" bson:"avatar"`
-	Salt         *string `json:"salt,omitempty" bson:"salt"`
 	RefreshToken *string `json:"refreshToken,omitempty" bson:"refreshToken"`
 }
 
 // user
 type User struct {
-	ID           string    `json:"_id" bson:"_id"`
-	DisplayName  string    `json:"displayName" bson:"displayName"`
-	Username     string    `json:"username" bson:"username"`
-	Password     string    `json:"password" bson:"password"`
-	Email        string    `json:"email" bson:"email"`
-	Biography    *string   `json:"biography,omitempty" bson:"biography"`
-	Avatar       *string   `json:"avatar,omitempty" bson:"avatar"`
-	CreatedAt    time.Time `json:"createdAt" bson:"createdAt"`
-	Salt         string    `json:"salt" bson:"salt"`
-	RefreshToken string    `json:"refreshToken" bson:"refreshToken"`
-	Events       []string  `json:"events" bson:"events"`
+	ID           primitive.ObjectID `json:"_id" bson:"_id"`
+	DisplayName  string             `json:"displayName" bson:"displayName"`
+	Username     string             `json:"username" bson:"username"`
+	Email        string             `json:"email" bson:"email"`
+	Biography    *string            `json:"biography,omitempty" bson:"biography"`
+	Avatar       *string            `json:"avatar,omitempty" bson:"avatar"`
+	CreatedAt    time.Time          `json:"createdAt" bson:"createdAt"`
+	Salt         string             `json:"salt" bson:"salt"`
+	Events       []string           `json:"events,omitempty" bson:"events"`
+	LastSignedIn time.Time          `json:"lastSignedIn" bson:"lastSignedIn"`
 }
 
 type UserRes struct {

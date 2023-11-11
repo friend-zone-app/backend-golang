@@ -6,11 +6,17 @@ package graph
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"log"
+	"net/http"
+	"parties-app/backend/authentication"
 	"parties-app/backend/database"
+	"parties-app/backend/directives"
 	"parties-app/backend/errorHandler"
 	"parties-app/backend/graph/customTypes"
 	"parties-app/backend/graph/generated"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -20,11 +26,13 @@ func (r *mutationResolver) UpdateUser(ctx context.Context, updateUser customType
 	objectID, err := primitive.ObjectIDFromHex(updateUser.Query)
 	if err != nil {
 		errorHandler.HandleError(ctx, 401, "Invalid Query user's ID.")
+		return false, err
 	}
 
 	err = database.UpdateUser(objectID, updateUser)
 	if err != nil {
 		errorHandler.HandleError(ctx, 500, "Unable to update user.")
+		return false, err
 	}
 
 	return true, nil
@@ -51,7 +59,7 @@ func (r *mutationResolver) CreateDate(ctx context.Context, createDate customType
 }
 
 // GetUserByID is the resolver for the getUserById field.
-func (r *queryResolver) GetUserByID(ctx context.Context, id int) (*customTypes.SensoredUser, error) {
+func (r *queryResolver) GetUserByID(ctx context.Context, id primitive.ObjectID) (*customTypes.SensoredUser, error) {
 	panic(fmt.Errorf("not implemented: GetUserByID - getUserById"))
 }
 
@@ -62,17 +70,99 @@ func (r *queryResolver) GetUserByName(ctx context.Context, username string) (*cu
 
 // Me is the resolver for the me field.
 func (r *queryResolver) Me(ctx context.Context) (*customTypes.User, error) {
-	panic(fmt.Errorf("not implemented: Me - me"))
+	userId := directives.ForContext(ctx)
+	if len(userId) < 5 {
+		errorHandler.HandleError(ctx, http.StatusNotAcceptable, "The authorization header is not found! (ForContext)")
+		fmt.Println(userId)
+		return nil, errors.New("the authorization header is not found (ForContext)")
+	}
+	id, err := authentication.ConvertUserIDStringToObjectID(userId)
+	if err != nil {
+		errorHandler.HandleError(ctx, http.StatusNotAcceptable, "The user id provided is invalid! (ConvertUserIDStringToObjectID)")
+		fmt.Println(id)
+		return nil, err
+	}
+	user, found, err := database.GetUserByID(*id)
+	if !found && err != nil {
+		errorHandler.HandleError(ctx, http.StatusInternalServerError, "Failed to fetch user (GetUserByID)")
+		fmt.Println(id)
+		return nil, err
+	} else if !found && err == nil {
+		errorHandler.HandleError(ctx, http.StatusNotFound, "User with that ID doesn't exist (GetUserByID)")
+		fmt.Println(id)
+		return nil, err
+	}
+
+	return user, nil
 }
 
 // RequestLogin is the resolver for the requestLogin field.
 func (r *queryResolver) RequestLogin(ctx context.Context, email string) (bool, error) {
-	panic(fmt.Errorf("not implemented: RequestLogin - requestLogin"))
+	err := authentication.LogInRequest(email)
+	if err != nil {
+		log.Fatalln(err)
+		errorHandler.HandleError(ctx, 500, "Unable to send email address")
+		return false, err
+	}
+
+	return true, nil
 }
 
 // ValidateOtp is the resolver for the validateOtp field.
-func (r *queryResolver) ValidateOtp(ctx context.Context, code string) (*customTypes.UserRes, error) {
-	panic(fmt.Errorf("not implemented: ValidateOtp - validateOtp"))
+func (r *queryResolver) ValidateOtp(ctx context.Context, code string, email string, username string) (*customTypes.UserRes, error) {
+	err := authentication.VeritifyEmail(code, email)
+	if err != nil {
+		errMessage := err.Error()
+		if errMessage == "0" {
+			errorHandler.HandleError(ctx, http.StatusNotFound, "The email provided hasn't been request a email verification!")
+			return nil, err
+		} else {
+			errorHandler.HandleError(ctx, http.StatusNotAcceptable, "The verification code provided is incorrect!")
+			return nil, err
+		}
+	}
+
+	newUserID := primitive.NewObjectID()
+	user, found, err := database.GetUserByEmail(email)
+	if !found && err != nil {
+		errorHandler.HandleError(ctx, http.StatusInternalServerError, "Failed to fetch user with that email address! (GetUserByEmail)")
+		return nil, err
+	} else if !found && err == nil {
+		uniqueUsername, err := database.CreateARandomUsername(username)
+		if err != nil {
+			errorHandler.HandleError(ctx, http.StatusInternalServerError, "Failed to fetch usernames! (CreateARandomUsername)")
+			return nil, err
+		}
+
+		user = &customTypes.User{
+			ID:           newUserID,
+			DisplayName:  username,
+			Username:     uniqueUsername,
+			Email:        email,
+			CreatedAt:    time.Now(),
+			Salt:         authentication.GenerateRandomSalt(10),
+			LastSignedIn: time.Now(),
+		}
+
+		ok, err := database.CreateUser(*user)
+		if err != nil || !ok {
+			errorHandler.HandleError(ctx, http.StatusInternalServerError, "Failed to create new user! (CreateUser)")
+			return nil, err
+		}
+	}
+
+	tokens, err := authentication.Sign(newUserID)
+	if err != nil {
+		errorHandler.HandleError(ctx, http.StatusInternalServerError, "Failed to sign a new token (Sign)")
+		return nil, err
+	}
+
+	respond := customTypes.UserRes{
+		User:  user,
+		Token: tokens,
+	}
+
+	return &respond, nil
 }
 
 // Logout is the resolver for the logout field.

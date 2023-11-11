@@ -26,14 +26,7 @@ func init() {
 		panic(connectErr)
 	}
 
-	defer func() {
-		err := Client.Disconnect(context.TODO())
-		if err != nil {
-			panic(err)
-		} else {
-			cancelContext()
-		}
-	}()
+	defer cancelContext()
 
 	log.Println("Connected to database!")
 
