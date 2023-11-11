@@ -31,5 +31,4 @@ models:
       - github.com/99designs/gqlgen/graphql.Int64
       - github.com/99designs/gqlgen/graphql.Int32
   ObjectID:
-    model:
-      - parties-app/backend/graph.ObjectID
+    model: parties-app/backend/scalar.MyCustomObjectIDScalar

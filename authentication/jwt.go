@@ -1,10 +1,11 @@
-package auth
+package authentication
 
 import (
+	"fmt"
 	"net/http"
 	"parties-app/backend/config"
-	"parties-app/backend/database"
 	"parties-app/backend/errorHandler"
+	"parties-app/backend/graph/customTypes"
 	"parties-app/backend/types"
 	"strings"
 	"time"
@@ -19,10 +20,10 @@ var (
 	AccessKey  = []byte(config.JWT_SECRET)
 )
 
-func Sign(userId primitive.ObjectID) (*Tokens, error) {
+func Sign(userId primitive.ObjectID) (*customTypes.Tokens, error) {
 
 	acClaim := &types.SignedDetails{
-		ID: userId.String(),
+		ID: userId.Hex(),
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(1 * time.Hour)),
 			Issuer:    "PlusOne",
@@ -30,7 +31,7 @@ func Sign(userId primitive.ObjectID) (*Tokens, error) {
 	}
 
 	rfClaim := &types.SignedDetails{
-		ID: userId.String(),
+		ID: userId.Hex(),
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(1 * time.Hour)),
 			Issuer:    "PlusOne",
@@ -50,14 +51,9 @@ func Sign(userId primitive.ObjectID) (*Tokens, error) {
 		return nil, err
 	}
 
-	tokens := Tokens{
+	tokens := customTypes.Tokens{
 		AccessToken:  actString,
 		RefreshToken: rfString,
-	}
-
-	err = database.UpdateRefreshToken(userId, rfString)
-	if err != nil {
-		return nil, err
 	}
 
 	return &tokens, nil
@@ -123,7 +119,32 @@ func ValidateHeaders(header string) (*string, *string) {
 	return &tokenString, nil
 }
 
-type Tokens struct {
-	AccessToken  string `json:"accessToken"`
-	RefreshToken string `json:"refreshToken"`
+func ConvertUserIDStringToObjectID(userIDString string) (*primitive.ObjectID, error) {
+	if strings.HasPrefix(userIDString, "ObjectID") {
+		idWithoutPrefix := strings.TrimPrefix(userIDString, "ObjectID")
+		objectID, err := primitive.ObjectIDFromHex(idWithoutPrefix)
+		if err != nil {
+			fmt.Println("Error converting string to ObjectID:", err)
+			return nil, err
+		}
+		fmt.Println("Converted ObjectID:", objectID)
+		return &objectID, nil
+	} else {
+		objectID, err := primitive.ObjectIDFromHex(userIDString)
+		if err != nil {
+			fmt.Println("Error converting string to ObjectID:", err)
+			return nil, err
+		}
+		fmt.Println("Converted ObjectID:", objectID)
+		return &objectID, nil
+	}
+}
+
+func ValidateUserID(userIDString string) string {
+	if strings.HasPrefix(userIDString, "ObjectID") {
+		idWithoutPrefix := strings.TrimPrefix(userIDString, "ObjectID")
+		return idWithoutPrefix
+	} else {
+		return userIDString
+	}
 }

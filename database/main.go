@@ -19,12 +19,14 @@ var (
 )
 
 func init() {
-	Context, _ = context.WithTimeout(context.Background(), 10*time.Second)
+	Context, cancelContext := context.WithTimeout(context.Background(), 10*time.Second)
 
 	Client, connectErr := mongo.Connect(Context, options.Client().ApplyURI(config.MONGO_URL))
 	if connectErr != nil {
 		panic(connectErr)
 	}
+
+	defer cancelContext()
 
 	log.Println("Connected to database!")
 

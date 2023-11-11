@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"parties-app/backend/graph/customTypes"
+	"parties-app/backend/scalar"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -17,6 +18,7 @@ import (
 	"github.com/99designs/gqlgen/graphql/introspection"
 	gqlparser "github.com/vektah/gqlparser/v2"
 	"github.com/vektah/gqlparser/v2/ast"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // region    ************************** generated!.gotpl **************************
@@ -114,13 +116,13 @@ type ComplexityRoot struct {
 		GetEventByID    func(childComplexity int, username string, id string) int
 		GetEvents       func(childComplexity int, username string, duration *string) int
 		GetLocationData func(childComplexity int, lat string, long string) int
-		GetUserByID     func(childComplexity int, id int) int
+		GetUserByID     func(childComplexity int, id primitive.ObjectID) int
 		GetUserByName   func(childComplexity int, username string) int
 		Logout          func(childComplexity int) int
 		Me              func(childComplexity int) int
 		RefreshToken    func(childComplexity int) int
 		RequestLogin    func(childComplexity int, email string) int
-		ValidateOtp     func(childComplexity int, code string) int
+		ValidateOtp     func(childComplexity int, code string, email string, username string) int
 	}
 
 	SensoredUser struct {
@@ -146,8 +148,7 @@ type ComplexityRoot struct {
 		Email        func(childComplexity int) int
 		Events       func(childComplexity int) int
 		ID           func(childComplexity int) int
-		Password     func(childComplexity int) int
-		RefreshToken func(childComplexity int) int
+		LastSignedIn func(childComplexity int) int
 		Salt         func(childComplexity int) int
 		Username     func(childComplexity int) int
 	}
@@ -166,11 +167,11 @@ type MutationResolver interface {
 	CreateDate(ctx context.Context, createDate customTypes.CreateDateInput) (bool, error)
 }
 type QueryResolver interface {
-	GetUserByID(ctx context.Context, id int) (*customTypes.SensoredUser, error)
+	GetUserByID(ctx context.Context, id primitive.ObjectID) (*customTypes.SensoredUser, error)
 	GetUserByName(ctx context.Context, username string) (*customTypes.SensoredUser, error)
 	Me(ctx context.Context) (*customTypes.User, error)
 	RequestLogin(ctx context.Context, email string) (bool, error)
-	ValidateOtp(ctx context.Context, code string) (*customTypes.UserRes, error)
+	ValidateOtp(ctx context.Context, code string, email string, username string) (*customTypes.UserRes, error)
 	Logout(ctx context.Context) (bool, error)
 	RefreshToken(ctx context.Context) (*customTypes.Tokens, error)
 	GetEvents(ctx context.Context, username string, duration *string) ([]*customTypes.Event, error)
@@ -555,7 +556,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.GetUserByID(childComplexity, args["_id"].(int)), true
+		return e.complexity.Query.GetUserByID(childComplexity, args["_id"].(primitive.ObjectID)), true
 
 	case "Query.getUserByName":
 		if e.complexity.Query.GetUserByName == nil {
@@ -612,7 +613,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.ValidateOtp(childComplexity, args["code"].(string)), true
+		return e.complexity.Query.ValidateOtp(childComplexity, args["code"].(string), args["email"].(string), args["username"].(string)), true
 
 	case "SensoredUser.avatar":
 		if e.complexity.SensoredUser.Avatar == nil {
@@ -726,19 +727,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.User.ID(childComplexity), true
 
-	case "User.password":
-		if e.complexity.User.Password == nil {
+	case "User.lastSignedIn":
+		if e.complexity.User.LastSignedIn == nil {
 			break
 		}
 
-		return e.complexity.User.Password(childComplexity), true
-
-	case "User.refreshToken":
-		if e.complexity.User.RefreshToken == nil {
-			break
-		}
-
-		return e.complexity.User.RefreshToken(childComplexity), true
+		return e.complexity.User.LastSignedIn(childComplexity), true
 
 	case "User.salt":
 		if e.complexity.User.Salt == nil {
@@ -879,12 +873,13 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 
 var sources = []*ast.Source{
 	{Name: "../typeDefs/user.gql", Input: `scalar Time
+scalar ObjectID
 
 directive @isAuthenticated on FIELD_DEFINITION
 
 """date"""
 type Event {
-  _id: ID!
+  _id: ObjectID!
   author: String!
   title: String!
   location: String!
@@ -897,28 +892,27 @@ type Event {
 
 """user"""
 type User {
-  _id: ID!
+  _id: ObjectID!
   displayName: String!
   username: String!
-  password: String!
   email: String!
   biography: String
   avatar: String
   createdAt: Time!
   salt: String!
-  refreshToken: String!
-  events: [String!]!
+  events: [String!]
+  lastSignedIn: Time!
 }
 
 """sensoredUser"""
 type SensoredUser {
-  _id: ID!
+  _id: ObjectID!
   displayName: String!
   username: String!
   email: String!
   biography: String
   avatar: String
-  events: [String!]!
+  events: [String!]
 }
 
 """Tokens"""
@@ -980,11 +974,11 @@ type UserRes {
 }
 
 type Query {
-  getUserById(_id: ID!): SensoredUser! @isAuthenticated()
+  getUserById(_id: ObjectID!): SensoredUser! @isAuthenticated()
   getUserByName(username: String!): SensoredUser! @isAuthenticated()
   me: User! @isAuthenticated()
   requestLogin(email: String!): Boolean!
-  validateOtp(code: String!): UserRes!
+  validateOtp(code: String!, email: String!, username: String!): UserRes!
   logout: Boolean! @isAuthenticated()
   refreshToken: Tokens! @isAuthenticated()
   getEvents(username: String!, duration: String): [Event]! @isAuthenticated()
@@ -1007,7 +1001,6 @@ input UpdateUserArgs {
   email: String
   biography: String
   avatar: String
-  salt: String
   refreshToken: String
 }
 
@@ -1214,10 +1207,10 @@ func (ec *executionContext) field_Query_getLocationData_args(ctx context.Context
 func (ec *executionContext) field_Query_getUserById_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 int
+	var arg0 primitive.ObjectID
 	if tmp, ok := rawArgs["_id"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("_id"))
-		arg0, err = ec.unmarshalNID2int(ctx, tmp)
+		arg0, err = ec.unmarshalNObjectID2goᚗmongodbᚗorgᚋmongoᚑdriverᚋbsonᚋprimitiveᚐObjectID(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -1268,6 +1261,24 @@ func (ec *executionContext) field_Query_validateOtp_args(ctx context.Context, ra
 		}
 	}
 	args["code"] = arg0
+	var arg1 string
+	if tmp, ok := rawArgs["email"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("email"))
+		arg1, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["email"] = arg1
+	var arg2 string
+	if tmp, ok := rawArgs["username"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("username"))
+		arg2, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["username"] = arg2
 	return args, nil
 }
 
@@ -1741,9 +1752,9 @@ func (ec *executionContext) _Event__id(ctx context.Context, field graphql.Collec
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(primitive.ObjectID)
 	fc.Result = res
-	return ec.marshalNID2string(ctx, field.Selections, res)
+	return ec.marshalNObjectID2goᚗmongodbᚗorgᚋmongoᚑdriverᚋbsonᚋprimitiveᚐObjectID(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Event__id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1753,7 +1764,7 @@ func (ec *executionContext) fieldContext_Event__id(ctx context.Context, field gr
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type ID does not have child fields")
+			return nil, errors.New("field of type ObjectID does not have child fields")
 		},
 	}
 	return fc, nil
@@ -2968,8 +2979,6 @@ func (ec *executionContext) fieldContext_Mutation_signup(ctx context.Context, fi
 				return ec.fieldContext_User_displayName(ctx, field)
 			case "username":
 				return ec.fieldContext_User_username(ctx, field)
-			case "password":
-				return ec.fieldContext_User_password(ctx, field)
 			case "email":
 				return ec.fieldContext_User_email(ctx, field)
 			case "biography":
@@ -2980,10 +2989,10 @@ func (ec *executionContext) fieldContext_Mutation_signup(ctx context.Context, fi
 				return ec.fieldContext_User_createdAt(ctx, field)
 			case "salt":
 				return ec.fieldContext_User_salt(ctx, field)
-			case "refreshToken":
-				return ec.fieldContext_User_refreshToken(ctx, field)
 			case "events":
 				return ec.fieldContext_User_events(ctx, field)
+			case "lastSignedIn":
+				return ec.fieldContext_User_lastSignedIn(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
 		},
@@ -3330,7 +3339,7 @@ func (ec *executionContext) _Query_getUserById(ctx context.Context, field graphq
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Query().GetUserByID(rctx, fc.Args["_id"].(int))
+			return ec.resolvers.Query().GetUserByID(rctx, fc.Args["_id"].(primitive.ObjectID))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.IsAuthenticated == nil {
@@ -3562,8 +3571,6 @@ func (ec *executionContext) fieldContext_Query_me(ctx context.Context, field gra
 				return ec.fieldContext_User_displayName(ctx, field)
 			case "username":
 				return ec.fieldContext_User_username(ctx, field)
-			case "password":
-				return ec.fieldContext_User_password(ctx, field)
 			case "email":
 				return ec.fieldContext_User_email(ctx, field)
 			case "biography":
@@ -3574,10 +3581,10 @@ func (ec *executionContext) fieldContext_Query_me(ctx context.Context, field gra
 				return ec.fieldContext_User_createdAt(ctx, field)
 			case "salt":
 				return ec.fieldContext_User_salt(ctx, field)
-			case "refreshToken":
-				return ec.fieldContext_User_refreshToken(ctx, field)
 			case "events":
 				return ec.fieldContext_User_events(ctx, field)
+			case "lastSignedIn":
+				return ec.fieldContext_User_lastSignedIn(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
 		},
@@ -3654,7 +3661,7 @@ func (ec *executionContext) _Query_validateOtp(ctx context.Context, field graphq
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().ValidateOtp(rctx, fc.Args["code"].(string))
+		return ec.resolvers.Query().ValidateOtp(rctx, fc.Args["code"].(string), fc.Args["email"].(string), fc.Args["username"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4273,9 +4280,9 @@ func (ec *executionContext) _SensoredUser__id(ctx context.Context, field graphql
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(primitive.ObjectID)
 	fc.Result = res
-	return ec.marshalNID2string(ctx, field.Selections, res)
+	return ec.marshalNObjectID2goᚗmongodbᚗorgᚋmongoᚑdriverᚋbsonᚋprimitiveᚐObjectID(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_SensoredUser__id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -4285,7 +4292,7 @@ func (ec *executionContext) fieldContext_SensoredUser__id(ctx context.Context, f
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type ID does not have child fields")
+			return nil, errors.New("field of type ObjectID does not have child fields")
 		},
 	}
 	return fc, nil
@@ -4526,14 +4533,11 @@ func (ec *executionContext) _SensoredUser_events(ctx context.Context, field grap
 		return graphql.Null
 	}
 	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
 		return graphql.Null
 	}
 	res := resTmp.([]string)
 	fc.Result = res
-	return ec.marshalNString2ᚕstringᚄ(ctx, field.Selections, res)
+	return ec.marshalOString2ᚕstringᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_SensoredUser_events(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -4663,9 +4667,9 @@ func (ec *executionContext) _User__id(ctx context.Context, field graphql.Collect
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(primitive.ObjectID)
 	fc.Result = res
-	return ec.marshalNID2string(ctx, field.Selections, res)
+	return ec.marshalNObjectID2goᚗmongodbᚗorgᚋmongoᚑdriverᚋbsonᚋprimitiveᚐObjectID(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_User__id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -4675,7 +4679,7 @@ func (ec *executionContext) fieldContext_User__id(ctx context.Context, field gra
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type ID does not have child fields")
+			return nil, errors.New("field of type ObjectID does not have child fields")
 		},
 	}
 	return fc, nil
@@ -4757,50 +4761,6 @@ func (ec *executionContext) _User_username(ctx context.Context, field graphql.Co
 }
 
 func (ec *executionContext) fieldContext_User_username(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "User",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _User_password(ctx context.Context, field graphql.CollectedField, obj *customTypes.User) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_User_password(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Password, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(string)
-	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_User_password(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "User",
 		Field:      field,
@@ -5027,50 +4987,6 @@ func (ec *executionContext) fieldContext_User_salt(ctx context.Context, field gr
 	return fc, nil
 }
 
-func (ec *executionContext) _User_refreshToken(ctx context.Context, field graphql.CollectedField, obj *customTypes.User) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_User_refreshToken(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.RefreshToken, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(string)
-	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_User_refreshToken(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "User",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _User_events(ctx context.Context, field graphql.CollectedField, obj *customTypes.User) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_User_events(ctx, field)
 	if err != nil {
@@ -5092,14 +5008,11 @@ func (ec *executionContext) _User_events(ctx context.Context, field graphql.Coll
 		return graphql.Null
 	}
 	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
 		return graphql.Null
 	}
 	res := resTmp.([]string)
 	fc.Result = res
-	return ec.marshalNString2ᚕstringᚄ(ctx, field.Selections, res)
+	return ec.marshalOString2ᚕstringᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_User_events(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -5110,6 +5023,50 @@ func (ec *executionContext) fieldContext_User_events(ctx context.Context, field 
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _User_lastSignedIn(ctx context.Context, field graphql.CollectedField, obj *customTypes.User) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_User_lastSignedIn(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.LastSignedIn, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(time.Time)
+	fc.Result = res
+	return ec.marshalNTime2timeᚐTime(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_User_lastSignedIn(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "User",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Time does not have child fields")
 		},
 	}
 	return fc, nil
@@ -5160,8 +5117,6 @@ func (ec *executionContext) fieldContext_UserRes_user(ctx context.Context, field
 				return ec.fieldContext_User_displayName(ctx, field)
 			case "username":
 				return ec.fieldContext_User_username(ctx, field)
-			case "password":
-				return ec.fieldContext_User_password(ctx, field)
 			case "email":
 				return ec.fieldContext_User_email(ctx, field)
 			case "biography":
@@ -5172,10 +5127,10 @@ func (ec *executionContext) fieldContext_UserRes_user(ctx context.Context, field
 				return ec.fieldContext_User_createdAt(ctx, field)
 			case "salt":
 				return ec.fieldContext_User_salt(ctx, field)
-			case "refreshToken":
-				return ec.fieldContext_User_refreshToken(ctx, field)
 			case "events":
 				return ec.fieldContext_User_events(ctx, field)
+			case "lastSignedIn":
+				return ec.fieldContext_User_lastSignedIn(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
 		},
@@ -7255,7 +7210,7 @@ func (ec *executionContext) unmarshalInputUpdateUserArgs(ctx context.Context, ob
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"query", "username", "password", "email", "biography", "avatar", "salt", "refreshToken"}
+	fieldsInOrder := [...]string{"query", "username", "password", "email", "biography", "avatar", "refreshToken"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -7316,15 +7271,6 @@ func (ec *executionContext) unmarshalInputUpdateUserArgs(ctx context.Context, ob
 				return it, err
 			}
 			it.Avatar = data
-		case "salt":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("salt"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Salt = data
 		case "refreshToken":
 			var err error
 
@@ -8113,9 +8059,6 @@ func (ec *executionContext) _SensoredUser(ctx context.Context, sel ast.Selection
 			out.Values[i] = ec._SensoredUser_avatar(ctx, field, obj)
 		case "events":
 			out.Values[i] = ec._SensoredUser_events(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -8209,11 +8152,6 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "password":
-			out.Values[i] = ec._User_password(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
 		case "email":
 			out.Values[i] = ec._User_email(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -8233,13 +8171,10 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "refreshToken":
-			out.Values[i] = ec._User_refreshToken(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
 		case "events":
 			out.Values[i] = ec._User_events(ctx, field, obj)
+		case "lastSignedIn":
+			out.Values[i] = ec._User_lastSignedIn(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -8780,36 +8715,6 @@ func (ec *executionContext) marshalNGeocodePoint2ᚖpartiesᚑappᚋbackendᚋgr
 	return ec._GeocodePoint(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalNID2int(ctx context.Context, v interface{}) (int, error) {
-	res, err := graphql.UnmarshalInt(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNID2int(ctx context.Context, sel ast.SelectionSet, v int) graphql.Marshaler {
-	res := graphql.MarshalInt(v)
-	if res == graphql.Null {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-	}
-	return res
-}
-
-func (ec *executionContext) unmarshalNID2string(ctx context.Context, v interface{}) (string, error) {
-	res, err := graphql.UnmarshalID(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNID2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
-	res := graphql.MarshalID(v)
-	if res == graphql.Null {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-	}
-	return res
-}
-
 func (ec *executionContext) marshalNInterception2ᚖpartiesᚑappᚋbackendᚋgraphᚋcustomTypesᚐInterception(ctx context.Context, sel ast.SelectionSet, v *customTypes.Interception) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
@@ -8832,6 +8737,21 @@ func (ec *executionContext) marshalNLocation2ᚖpartiesᚑappᚋbackendᚋgraph�
 		return graphql.Null
 	}
 	return ec._Location(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNObjectID2goᚗmongodbᚗorgᚋmongoᚑdriverᚋbsonᚋprimitiveᚐObjectID(ctx context.Context, v interface{}) (primitive.ObjectID, error) {
+	res, err := scalar.UnmarshalMyCustomObjectIDScalar(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNObjectID2goᚗmongodbᚗorgᚋmongoᚑdriverᚋbsonᚋprimitiveᚐObjectID(ctx context.Context, sel ast.SelectionSet, v primitive.ObjectID) graphql.Marshaler {
+	res := scalar.MarshalMyCustomObjectIDScalar(v)
+	if res == graphql.Null {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+	}
+	return res
 }
 
 func (ec *executionContext) marshalNPoint2ᚖpartiesᚑappᚋbackendᚋgraphᚋcustomTypesᚐPoint(ctx context.Context, sel ast.SelectionSet, v *customTypes.Point) graphql.Marshaler {

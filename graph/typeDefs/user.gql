@@ -1,10 +1,11 @@
 scalar Time
+scalar ObjectID
 
 directive @isAuthenticated on FIELD_DEFINITION
 
 """date"""
 type Event {
-  _id: ID!
+  _id: ObjectID!
   author: String!
   title: String!
   location: String!
@@ -17,28 +18,27 @@ type Event {
 
 """user"""
 type User {
-  _id: ID!
+  _id: ObjectID!
   displayName: String!
   username: String!
-  password: String!
   email: String!
   biography: String
   avatar: String
   createdAt: Time!
   salt: String!
-  refreshToken: String!
-  events: [String!]!
+  events: [String!]
+  lastSignedIn: Time!
 }
 
 """sensoredUser"""
 type SensoredUser {
-  _id: ID!
+  _id: ObjectID!
   displayName: String!
   username: String!
   email: String!
   biography: String
   avatar: String
-  events: [String!]!
+  events: [String!]
 }
 
 """Tokens"""
@@ -100,11 +100,11 @@ type UserRes {
 }
 
 type Query {
-  getUserById(_id: ID!): SensoredUser! @isAuthenticated()
+  getUserById(_id: ObjectID!): SensoredUser! @isAuthenticated()
   getUserByName(username: String!): SensoredUser! @isAuthenticated()
   me: User! @isAuthenticated()
   requestLogin(email: String!): Boolean!
-  validateOtp(code: String!): UserRes!
+  validateOtp(code: String!, email: String!, username: String!): UserRes!
   logout: Boolean! @isAuthenticated()
   refreshToken: Tokens! @isAuthenticated()
   getEvents(username: String!, duration: String): [Event]! @isAuthenticated()
@@ -127,7 +127,6 @@ input UpdateUserArgs {
   email: String
   biography: String
   avatar: String
-  salt: String
   refreshToken: String
 }
 

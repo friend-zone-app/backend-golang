@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"go/types"
 	"os"
 
 	"github.com/99designs/gqlgen/api"
@@ -17,15 +16,6 @@ func mutateHook(b *modelgen.ModelBuild) *modelgen.ModelBuild {
 			if name == "id" {
 				name = "_id"
 			}
-			dataType := field.Type
-			if basic, ok := dataType.(*types.Basic); ok && basic.Kind() == types.Int {
-				// Convert to string
-				stringType := types.Typ[types.String]
-
-				dataType = stringType
-				// Now stringValue is a string representation of yourIntVariable
-			}
-			field.Type = dataType
 			field.Tag += ` bson:"` + name + `"`
 		}
 	}

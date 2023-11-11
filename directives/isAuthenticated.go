@@ -2,6 +2,7 @@ package directives
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	auth "parties-app/backend/authentication"
 	"parties-app/backend/errorHandler"
@@ -10,8 +11,15 @@ import (
 	"github.com/99designs/gqlgen/graphql"
 )
 
+var userCtxKey = &contextKey{"accessToken"}
+
+type contextKey struct {
+	name string
+}
+
 func IsAuthenticated(ctx context.Context, obj interface{}, next graphql.Resolver) (interface{}, error) {
-	headers := graphql.GetOperationContext(ctx).Headers
+	request := graphql.GetOperationContext(ctx)
+	headers := request.Headers
 
 	header := headers.Get("Authorization")
 	token, err := auth.ValidateHeaders(header)
@@ -27,5 +35,13 @@ func IsAuthenticated(ctx context.Context, obj interface{}, next graphql.Resolver
 		return nil, errorHandler.ValidateErrorMessage(http.StatusUnauthorized, *parseErr)
 	}
 
-	return next(ctx)
+	fmt.Println(claims.ID)
+	newContext := context.WithValue(ctx, userCtxKey, claims.ID)
+
+	return next(newContext)
+}
+
+func ForContext(ctx context.Context) string {
+	raw, _ := ctx.Value(userCtxKey).(string)
+	return raw
 }
