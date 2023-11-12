@@ -73,13 +73,11 @@ func (r *queryResolver) Me(ctx context.Context) (*customTypes.User, error) {
 	userId := directives.ForContext(ctx)
 	if len(userId) < 5 {
 		errorHandler.HandleError(ctx, http.StatusNotAcceptable, "The authorization header is not found! (ForContext)")
-		fmt.Println(userId)
 		return nil, errors.New("the authorization header is not found (ForContext)")
 	}
 	id, err := authentication.ConvertUserIDStringToObjectID(userId)
 	if err != nil {
 		errorHandler.HandleError(ctx, http.StatusNotAcceptable, "The user id provided is invalid! (ConvertUserIDStringToObjectID)")
-		fmt.Println(id)
 		return nil, err
 	}
 	user, found, err := database.GetUserByID(*id)

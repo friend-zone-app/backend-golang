@@ -40,5 +40,5 @@ func main() {
 
 	r.Use(middleware.CorsMiddleware())
 
-	r.Run()
+	r.Run(":3000")
 }
