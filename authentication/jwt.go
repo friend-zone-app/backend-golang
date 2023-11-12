@@ -23,7 +23,7 @@ var (
 func Sign(userId primitive.ObjectID) (*customTypes.Tokens, error) {
 
 	acClaim := &types.SignedDetails{
-		ID: userId.Hex(),
+		ID: ValidateUserID(userId.Hex()),
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(1 * time.Hour)),
 			Issuer:    "PlusOne",
@@ -31,7 +31,7 @@ func Sign(userId primitive.ObjectID) (*customTypes.Tokens, error) {
 	}
 
 	rfClaim := &types.SignedDetails{
-		ID: userId.Hex(),
+		ID: ValidateUserID(userId.Hex()),
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(1 * time.Hour)),
 			Issuer:    "PlusOne",

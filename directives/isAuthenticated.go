@@ -2,7 +2,6 @@ package directives
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	auth "parties-app/backend/authentication"
 	"parties-app/backend/errorHandler"
@@ -29,13 +28,11 @@ func IsAuthenticated(ctx context.Context, obj interface{}, next graphql.Resolver
 
 	claims, valid, parseErr := auth.ParseAccessToken(*token)
 	if !valid && parseErr != nil {
-		if claims.ExpiresAt.Unix() > time.Now().Unix() {
+		if claims != nil && claims.ExpiresAt.Unix() > time.Now().Unix() {
 			errorHandler.HandleError(ctx, http.StatusRequestTimeout, errorHandler.RefreshToken)
 		}
 		return nil, errorHandler.ValidateErrorMessage(http.StatusUnauthorized, *parseErr)
 	}
-
-	fmt.Println(claims.ID)
 	newContext := context.WithValue(ctx, userCtxKey, claims.ID)
 
 	return next(newContext)
