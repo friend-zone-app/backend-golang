@@ -112,10 +112,10 @@ func (r *queryResolver) ValidateOtp(ctx context.Context, code string, email stri
 	if err != nil {
 		errMessage := err.Error()
 		if errMessage == "0" {
-			errorHandler.HandleError(ctx, http.StatusNotFound, "The email provided hasn't been request a email verification!")
+			errorHandler.HandleError(ctx, http.StatusNotFound, "The email provided hasn't been request a email verification! (VerifyEmail)")
 			return nil, err
 		} else {
-			errorHandler.HandleError(ctx, http.StatusNotAcceptable, "The verification code provided is incorrect!")
+			errorHandler.HandleError(ctx, http.StatusNotAcceptable, "The verification code provided is expired or incorrect! Please request a new one. (VertifyEmail)")
 			return nil, err
 		}
 	}

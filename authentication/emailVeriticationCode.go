@@ -42,6 +42,11 @@ func (handler Otp) Write(userId, code string) (*OtpStruct, bool) {
 	}
 }
 
+func (handler Otp) Delete(userId string) bool {
+	delete(handler.GetOTP(), userId)
+	return true
+}
+
 func (handler Otp) Register(userId, code string) {
 	now := time.Now()
 	otpstruct := OtpStruct{userId: userId, createdAt: now, code: code}
