@@ -23,7 +23,7 @@ func Sign(userId primitive.ObjectID) (*customTypes.Tokens, error) {
 	acClaim := &types.SignedDetails{
 		ID: ValidateUserID(userId.Hex()),
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(1 * time.Minute)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(1 * time.Hour)),
 			Issuer:    "Parties-App",
 		},
 	}
