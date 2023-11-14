@@ -16,8 +16,10 @@ import (
 	"parties-app/backend/errorHandler"
 	"parties-app/backend/graph/customTypes"
 	"parties-app/backend/graph/generated"
+	"strings"
 	"time"
 
+	"github.com/99designs/gqlgen/graphql"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -70,6 +72,8 @@ func (r *queryResolver) GetUserByName(ctx context.Context, username string) (*cu
 
 // Me is the resolver for the me field.
 func (r *queryResolver) Me(ctx context.Context) (*customTypes.User, error) {
+	fmt.Println("Get self")
+
 	userId := directives.ForContext(ctx)
 	if len(userId) < 5 {
 		errorHandler.HandleError(ctx, http.StatusNotAcceptable, "The authorization header is not found! (ForContext)")
@@ -149,7 +153,7 @@ func (r *queryResolver) ValidateOtp(ctx context.Context, code string, email stri
 		}
 	}
 
-	tokens, err := authentication.Sign(newUserID)
+	tokens, err := authentication.Sign(user.ID)
 	if err != nil {
 		errorHandler.HandleError(ctx, http.StatusInternalServerError, "Failed to sign a new token (Sign)")
 		return nil, err
@@ -170,7 +174,43 @@ func (r *queryResolver) Logout(ctx context.Context) (bool, error) {
 
 // RefreshToken is the resolver for the refreshToken field.
 func (r *queryResolver) RefreshToken(ctx context.Context) (*customTypes.Tokens, error) {
-	panic(fmt.Errorf("not implemented: RefreshToken - refreshToken"))
+	fmt.Println("Refreshed")
+
+	request := graphql.GetOperationContext(ctx)
+	headers := request.Headers.Get("Authorization")
+	token, err := authentication.ValidateHeaders(headers)
+	if err != nil {
+		return nil, errorHandler.ValidateErrorMessage(http.StatusBadRequest, *err)
+	}
+
+	claims, valid, parseErr := authentication.ParseRefreshToken(*token)
+	if parseErr != nil {
+		if strings.HasPrefix(parseErr.Error(), "token is expired") {
+			return nil, errorHandler.ValidateErrorMessage(http.StatusRequestTimeout, "The token is expired, please login again!")
+		}
+
+		return nil, errors.New("the refresh token is invalid, please login again")
+	}
+	if !valid || claims == nil {
+		return nil, errors.New("the refresh token is invalid, please login again")
+	}
+
+	userId, converErr := authentication.ConvertUserIDStringToObjectID(claims.ID)
+	if converErr != nil {
+		errorHandler.HandleError(ctx, http.StatusInternalServerError, "The user id that been signed is invalid, please login again!")
+		return nil, converErr
+	}
+
+	tokens, converErr := authentication.Sign(*userId)
+	if converErr != nil {
+		errorHandler.HandleError(ctx, http.StatusInternalServerError, "Failed to sign a new access token and refresh token.")
+		return nil, converErr
+	}
+
+	return &customTypes.Tokens{
+		AccessToken:  tokens.AccessToken,
+		RefreshToken: tokens.RefreshToken,
+	}, nil
 }
 
 // GetEvents is the resolver for the getEvents field.
