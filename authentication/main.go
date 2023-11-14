@@ -38,7 +38,8 @@ func VeritifyEmail(code string, email string) error {
 		return errors.New("0")
 	}
 
-	if otp.code == code {
+	if otp.code == code && time.Now().Unix()-otp.createdAt.Unix() < 3000000 {
+		OtpClass.Delete(email)
 		return nil
 	} else {
 		return errors.New("1")

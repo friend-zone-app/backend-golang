@@ -106,7 +106,7 @@ type Query {
   requestLogin(email: String!): Boolean!
   validateOtp(code: String!, email: String!, username: String!): UserRes!
   logout: Boolean! @isAuthenticated()
-  refreshToken: Tokens! @isAuthenticated()
+  refreshToken: Tokens!
   getEvents(username: String!, duration: String): [Event]! @isAuthenticated()
   getEventById(username: String!, id: String!): Event! @isAuthenticated()
   getLocationData(lat: String!, long: String!): Location! @isAuthenticated()

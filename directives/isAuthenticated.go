@@ -2,10 +2,11 @@ package directives
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	auth "parties-app/backend/authentication"
 	"parties-app/backend/errorHandler"
-	"time"
+	"strings"
 
 	"github.com/99designs/gqlgen/graphql"
 )
@@ -17,6 +18,8 @@ type contextKey struct {
 }
 
 func IsAuthenticated(ctx context.Context, obj interface{}, next graphql.Resolver) (interface{}, error) {
+	var newContext context.Context
+
 	request := graphql.GetOperationContext(ctx)
 	headers := request.Headers
 
@@ -27,13 +30,19 @@ func IsAuthenticated(ctx context.Context, obj interface{}, next graphql.Resolver
 	}
 
 	claims, valid, parseErr := auth.ParseAccessToken(*token)
-	if !valid && parseErr != nil {
-		if claims != nil && claims.ExpiresAt.Unix() > time.Now().Unix() {
-			errorHandler.HandleError(ctx, http.StatusRequestTimeout, errorHandler.RefreshToken)
+	if parseErr != nil {
+		fmt.Println("Directive", parseErr.Error(), strings.HasPrefix(parseErr.Error(), "token is expired"))
+		if strings.HasPrefix(parseErr.Error(), "token is expired") {
+			return nil, errorHandler.ValidateErrorMessage(http.StatusRequestTimeout, "The token is expired, please login again!")
 		}
-		return nil, errorHandler.ValidateErrorMessage(http.StatusUnauthorized, *parseErr)
+		return nil, errorHandler.ValidateErrorMessage(http.StatusUnauthorized, "Invalid token")
 	}
-	newContext := context.WithValue(ctx, userCtxKey, claims.ID)
+
+	if !valid {
+		return nil, errorHandler.ValidateErrorMessage(http.StatusUnauthorized, "Invalid token")
+	} else {
+		newContext = context.WithValue(ctx, userCtxKey, claims.ID)
+	}
 
 	return next(newContext)
 }

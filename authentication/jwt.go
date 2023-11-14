@@ -2,7 +2,6 @@ package authentication
 
 import (
 	"fmt"
-	"net/http"
 	"parties-app/backend/config"
 	"parties-app/backend/errorHandler"
 	"parties-app/backend/graph/customTypes"
@@ -10,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v4"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -26,15 +24,15 @@ func Sign(userId primitive.ObjectID) (*customTypes.Tokens, error) {
 		ID: ValidateUserID(userId.Hex()),
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(1 * time.Hour)),
-			Issuer:    "PlusOne",
+			Issuer:    "Parties-App",
 		},
 	}
 
 	rfClaim := &types.SignedDetails{
 		ID: ValidateUserID(userId.Hex()),
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(1 * time.Hour)),
-			Issuer:    "PlusOne",
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(14 * 24 * time.Hour)),
+			Issuer:    "Parties-App",
 		},
 	}
 
@@ -59,12 +57,16 @@ func Sign(userId primitive.ObjectID) (*customTypes.Tokens, error) {
 	return &tokens, nil
 }
 
-func ParseAccessToken(tokenStr string) (*types.SignedDetails, bool, *string) {
+func ParseAccessToken(tokenStr string) (*types.SignedDetails, bool, error) {
 	token, err := jwt.ParseWithClaims(tokenStr, &types.SignedDetails{}, func(token *jwt.Token) (interface{}, error) {
 		return AccessKey, nil
 	})
 	if err != nil {
-		return nil, false, &errorHandler.FailedTokenValidation
+		fmt.Println(err)
+		if strings.HasPrefix(err.Error(), "token is expired") {
+			fmt.Println(err)
+		}
+		return nil, false, err
 	}
 
 	claims := token.Claims.(*types.SignedDetails)
@@ -72,42 +74,17 @@ func ParseAccessToken(tokenStr string) (*types.SignedDetails, bool, *string) {
 	return claims, token.Valid, nil
 }
 
-func ParseRefreshToken(tokenStr string) (*types.SignedDetails, bool, *string) {
+func ParseRefreshToken(tokenStr string) (*types.SignedDetails, bool, error) {
 	token, err := jwt.ParseWithClaims(tokenStr, &types.SignedDetails{}, func(token *jwt.Token) (interface{}, error) {
 		return RefreshKey, nil
 	})
 	if err != nil {
-		return nil, false, &errorHandler.FailedTokenValidation
+		return nil, false, err
 	}
 
 	claims := token.Claims.(*types.SignedDetails)
 
 	return claims, token.Valid, nil
-}
-
-func JwtMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		token, err := ValidateHeaders(c.GetHeader("Authorization"))
-		if err != nil {
-			errorHandler.Unauthorized(c, http.StatusBadRequest, errorHandler.AuthorizationKeyNotFound)
-			return
-		}
-
-		claims, valid, parseErr := ParseAccessToken(*token)
-		if !valid && parseErr != nil {
-			if claims.ExpiresAt.Unix() > time.Now().Unix() {
-				errorHandler.Unauthorized(c, http.StatusRequestTimeout, errorHandler.RefreshToken)
-				return
-			}
-			errorHandler.Unauthorized(c, http.StatusUnauthorized, *parseErr)
-			c.Abort()
-			return
-		}
-
-		c.Set("JWT_PAYLOAD", claims)
-
-		c.Next()
-	}
 }
 
 func ValidateHeaders(header string) (*string, *string) {
