@@ -2,19 +2,7 @@ scalar Time
 scalar ObjectID
 
 directive @isAuthenticated on FIELD_DEFINITION
-
-"""date"""
-type Event {
-  _id: ObjectID!
-  author: String!
-  title: String!
-  location: String!
-  time: Float!
-  createdAt: Time!
-  inviters: [String!]
-  cancelled: Boolean!
-  expireIn: Float!
-}
+directive @atTheEvent on FIELD_DEFINITION
 
 """user"""
 type User {
@@ -25,20 +13,79 @@ type User {
   biography: String
   avatar: String
   createdAt: Time!
-  salt: String!
-  events: [String!]
-  lastSignedIn: Time!
+  events: [ObjectID!]
+  posts: [ObjectID!]
+  friendsReq: [FriendReq!]
+  friendList: [ObjectID!]
+  badges: [Badge!]
+  level: Int!
+  setting: Setting!
 }
 
-"""sensoredUser"""
-type SensoredUser {
+type Badge {
   _id: ObjectID!
-  displayName: String!
-  username: String!
-  email: String!
-  biography: String
-  avatar: String
-  events: [String!]
+  type: BadgeType!
+  value: String
+  enabled: Boolean!
+  focused: Boolean!
+}
+
+type FriendReq {
+  createdAt: Time!
+  status: Boolean!
+  user: ObjectID!
+}
+
+type Setting {
+  privacy: Privacy!
+  colorMode: ColorMode!
+  eventAutomation: [EventAutomation!]
+}
+
+type Privacy {
+  shareLocation: UserPrivacy!
+  reactionOnPost: UserPrivacy!
+  joinPost: UserPrivacy!
+  friendRequest: UserPrivacy!
+}
+
+type EventAutomation {
+  _id: ObjectID!
+  title: String!
+  location: Point!
+  description: String!
+  startsAt: Time!
+  endsAt: Time
+  createdAt: Time!
+  inviters: [Invite!]
+  repeat: [WeekDays!]
+}
+
+enum BadgeType {
+  SPECIAL
+  ROLE
+  DAILY
+}
+
+enum ColorMode {
+  LIGHT
+  DARK
+}
+
+enum UserPrivacy {
+  FRIENDS
+  EVERYONE
+  NOBODY
+}
+
+enum WeekDays {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURSDAY
+  SUNDAY
 }
 
 """Tokens"""
@@ -47,77 +94,40 @@ type Tokens {
   refreshToken: String!
 }
 
-"""Interception"""
-type Interception {
-  baseStreet: String!
-  secondaryStreet1: String!
-  intersectionType: String!
-  displayName: String!
-}
-
-"""Address"""
-type Address {
-  addressLine: String!
-  adminDistrict: String!
-  adminDistrict2: String!
-  countryRegion: String!
-  formattedAddress: String!
-  intersection: Interception!
-  locality: String!
-  postalCode: String!
-  countryRegionIso2: String!
-}
-
-"""Geocodepoint"""
-type GeocodePoint {
-  type: String!
-  coordinates: [Float!]!
-  calculationMethod: String!
-  usageTypes: [String!]!
-}
-
-"""Point"""
-type Point {
-  type: String!
-  coordinates: [Float!]!
-}
-
-"""Location"""
-type Location {
-  bbox: [Float!]!
-  name: String!
-  point: Point!
-  address: Address!
-  confidence: String!
-  entityType: String!
-  geocodePoint: GeocodePoint!
-  matchCodes: [String!]!
-}
-
 type UserRes {
   user: User!
   token: Tokens!
 }
 
 type Query {
-  getUserById(_id: ObjectID!): SensoredUser! @isAuthenticated()
-  getUserByName(username: String!): SensoredUser! @isAuthenticated()
+  getUserById(_id: String!): User! @isAuthenticated()
+  getUserByName(username: String!): User! @isAuthenticated()
   me: User! @isAuthenticated()
   requestLogin(email: String!): Boolean!
-  validateOtp(code: String!, email: String!, username: String!): UserRes!
   logout: Boolean! @isAuthenticated()
-  refreshToken: Tokens!
-  getEvents(username: String!, duration: String): [Event]! @isAuthenticated()
-  getEventById(username: String!, id: String!): Event! @isAuthenticated()
   getLocationData(lat: String!, long: String!): Location! @isAuthenticated()
+  getUserEvents(userId: String!): [Event]! @isAuthenticated()
+  getUserEventById(userId: String!, id: String!): Event! @isAuthenticated()
+  getLocalEvent(lat: String!, long: String!): [Event]! @isAuthenticated()
+  getEvent(id: String!): Event! @isAuthenticated() @atTheEvent()
 }
 
 type Mutation {
   updateUser(updateUser: UpdateUserArgs!): Boolean! @isAuthenticated()
-  signup(createUser: CreateUserArgs!): User!
-  updateDate(updateDate: UpdateDateInput!): Boolean! @isAuthenticated()
-  removeDate(removeDate: RemoveDateInput!): Boolean! @isAuthenticated()
-  createDate(createDate: CreateDateInput!): Boolean! @isAuthenticated()
+  validateOtp(code: String!, email: String!, username: String!): UserRes!
+  refreshToken: Tokens!
+  addAutomation(automation: AddAutomationInput!): Boolean! @isAuthenticated()
+  removeAutomation(automation: RemoveAutomationInput!): Boolean! @isAuthenticated()
+  updateSetting(setting: UpdateSettingInput!): Boolean! @isAuthenticated()
+  updatePost(updatePost: UpdatePostInput!): Boolean! @isAuthenticated()
+  removePost(removePost: RemovePostInput!): Boolean! @isAuthenticated()
+  createPost(createPost: CreatePostInput!): Boolean! @isAuthenticated()
+  addReaction(postId: String!, reactionType: ReactionTypeInput!): Boolean! @isAuthenticated()
+  createEvent(createEvent: CreateEventInput!): Event! @isAuthenticated()
+  removeEvent(removeEvent: RemoveEventInput!): Boolean! @isAuthenticated()
+  updateEvent(updateEvent: UpdateEventInput!): Event! @isAuthenticated()
+  addBadge(badge: AddBadgeInput!): Boolean! @isAuthenticated()
+  updateBadge(badge: UpdateBadgeInput!): Boolean! @isAuthenticated()
 }
 
 input UpdateUserArgs {
@@ -136,28 +146,41 @@ input CreateUserArgs {
   email: String!
 }
 
-input UpdateDateInput {
-  query: String!
-  author: String
-  title: String
-  time: Float
-  inviters: [String!]
-  cancelled: Boolean
-  expireIn: Float
-}
-
-input RemoveDateInput {
-  username: String!
-  id: String!
-}
-
-
-
-input CreateDateInput {
+input AddAutomationInput {
   title: String!
-  time: Float!
-  inviters: [String!]
-  cancelled: Boolean
-  expireIn: Float
-  location: String!
+  location: [Float]!
+  description: String!
+  startsAt: Time!
+  endsAt: Time
+  createdAt: Time!
+  inviters: [InviteInput!]
+  repeat: [WeekDays!]
+}
+
+input RemoveAutomationInput {
+  inputId: String!
+}
+
+input UpdateSettingInput {
+  privacy: PrivacyInput
+  colorMode: ColorMode
+}
+
+input PrivacyInput {
+  shareLocation: UserPrivacy!
+  reactionOnPost: UserPrivacy!
+  joinPost: UserPrivacy!
+  friendRequest: UserPrivacy!
+}
+
+input AddBadgeInput {
+  type: BadgeType!
+  value: String
+  enabled: Boolean!
+}
+
+input UpdateBadgeInput {
+  query: String!
+  value: String
+  enabled: Boolean
 }

@@ -2,6 +2,7 @@ package database
 
 import (
 	"crypto/rand"
+	"math"
 	"math/big"
 	"parties-app/backend/graph/customTypes"
 	"strings"
@@ -20,6 +21,13 @@ func GetUserByID(id primitive.ObjectID) (*customTypes.User, bool, error) {
 		return nil, false, nil
 	} else if err != nil {
 		return nil, false, err
+	}
+
+	if len(user.Events) >= int(math.Pow(float64(user.Level), 2)) {
+		err := AddLevelUser(id)
+		if err != nil {
+			return nil, false, err
+		}
 	}
 
 	return user, true, nil
@@ -60,8 +68,8 @@ func CreateUser(user customTypes.User) (bool, error) {
 	return true, nil
 }
 
-func GetManyUserID(ids []primitive.ObjectID) (*[]customTypes.SensoredUser, bool, error) {
-	var users []customTypes.SensoredUser
+func GetManyUserID(ids []primitive.ObjectID) (*[]customTypes.User, bool, error) {
+	var users []customTypes.User
 	cursor, err := UserCollection.Find(Context, bson.D{{Key: "_id", Value: bson.D{{Key: "$in", Value: ids}}}})
 	if err != nil {
 		return nil, false, err
@@ -84,6 +92,15 @@ func UpdateRefreshToken(userId primitive.ObjectID, token string) error {
 
 func UpdateUser(userId primitive.ObjectID, newUser customTypes.UpdateUserArgs) error {
 	_, err := UserCollection.UpdateOne(Context, bson.D{{Key: "_id", Value: userId}}, bson.D{{Key: "$set", Value: newUser}})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func AddLevelUser(userID primitive.ObjectID) error {
+	_, err := UserCollection.UpdateOne(Context, bson.D{{Key: "_id", Value: userID}}, bson.M{"$inc": bson.M{"level": 1}})
 	if err != nil {
 		return err
 	}
