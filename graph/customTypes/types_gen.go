@@ -68,12 +68,6 @@ type CreatePostInput struct {
 	Location  []*float64 `json:"location" bson:"location"`
 }
 
-type CreateUserArgs struct {
-	Username string `json:"username" bson:"username"`
-	Password string `json:"password" bson:"password"`
-	Email    string `json:"email" bson:"email"`
-}
-
 // date
 type Event struct {
 	ID          primitive.ObjectID `json:"_id" bson:"_id"`
@@ -173,10 +167,10 @@ type Privacy struct {
 }
 
 type PrivacyInput struct {
-	ShareLocation  UserPrivacy `json:"shareLocation" bson:"shareLocation"`
-	ReactionOnPost UserPrivacy `json:"reactionOnPost" bson:"reactionOnPost"`
-	JoinPost       UserPrivacy `json:"joinPost" bson:"joinPost"`
-	FriendRequest  UserPrivacy `json:"friendRequest" bson:"friendRequest"`
+	ShareLocation  *UserPrivacy `json:"shareLocation,omitempty" bson:"shareLocation"`
+	ReactionOnPost *UserPrivacy `json:"reactionOnPost,omitempty" bson:"reactionOnPost"`
+	JoinPost       *UserPrivacy `json:"joinPost,omitempty" bson:"joinPost"`
+	FriendRequest  *UserPrivacy `json:"friendRequest,omitempty" bson:"friendRequest"`
 }
 
 type Reaction struct {
@@ -206,6 +200,11 @@ type Setting struct {
 	Privacy         *Privacy           `json:"privacy" bson:"privacy"`
 	ColorMode       ColorMode          `json:"colorMode" bson:"colorMode"`
 	EventAutomation []*EventAutomation `json:"eventAutomation,omitempty" bson:"eventAutomation"`
+}
+
+type SettingInput struct {
+	Privacy   *PrivacyInput `json:"privacy,omitempty" bson:"privacy"`
+	ColorMode *ColorMode    `json:"colorMode,omitempty" bson:"colorMode"`
 }
 
 // Tokens

@@ -108,6 +108,11 @@ func CreateEvent(event customTypes.Event) (bool, error) {
 		return false, err
 	}
 
+	err = AddEventToUser(event.Author, event.ID)
+	if err != nil {
+		return false, err
+	}
+
 	return true, nil
 }
 

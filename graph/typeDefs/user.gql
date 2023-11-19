@@ -114,7 +114,7 @@ type Query {
 
 type Mutation {
   updateUser(updateUser: UpdateUserArgs!): Boolean! @isAuthenticated()
-  validateOtp(code: String!, email: String!, username: String!): UserRes!
+  validateOtp(code: String!, email: String!, username: String!, setting: SettingInput): UserRes!
   refreshToken: Tokens!
   addAutomation(automation: AddAutomationInput!): Boolean! @isAuthenticated()
   removeAutomation(automation: RemoveAutomationInput!): Boolean! @isAuthenticated()
@@ -140,10 +140,16 @@ input UpdateUserArgs {
   refreshToken: String
 }
 
-input CreateUserArgs {
-  username: String!
-  password: String!
-  email: String!
+input SettingInput {
+  privacy: PrivacyInput
+  colorMode: ColorMode
+}
+
+input PrivacyInput {
+  shareLocation: UserPrivacy
+  reactionOnPost: UserPrivacy
+  joinPost: UserPrivacy
+  friendRequest: UserPrivacy
 }
 
 input AddAutomationInput {
@@ -164,13 +170,6 @@ input RemoveAutomationInput {
 input UpdateSettingInput {
   privacy: PrivacyInput
   colorMode: ColorMode
-}
-
-input PrivacyInput {
-  shareLocation: UserPrivacy!
-  reactionOnPost: UserPrivacy!
-  joinPost: UserPrivacy!
-  friendRequest: UserPrivacy!
 }
 
 input AddBadgeInput {

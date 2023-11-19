@@ -42,7 +42,7 @@ func (r *mutationResolver) UpdateUser(ctx context.Context, updateUser customType
 }
 
 // ValidateOtp is the resolver for the validateOtp field.
-func (r *mutationResolver) ValidateOtp(ctx context.Context, code string, email string, username string) (*customTypes.UserRes, error) {
+func (r *mutationResolver) ValidateOtp(ctx context.Context, code string, email string, username string, setting *customTypes.SettingInput) (*customTypes.UserRes, error) {
 	err := authentication.VeritifyEmail(code, email)
 	if err != nil {
 		errMessage := err.Error()
@@ -70,7 +70,7 @@ func (r *mutationResolver) ValidateOtp(ctx context.Context, code string, email s
 		user = &customTypes.User{
 			ID:          newUserID,
 			DisplayName: username,
-			Username:    uniqueUsername,
+			Username:    strings.ToLower(uniqueUsername),
 			Email:       email,
 			CreatedAt:   time.Now(),
 			Setting: &customTypes.Setting{

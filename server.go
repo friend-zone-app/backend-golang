@@ -17,6 +17,7 @@ func graphqlHandler() gin.HandlerFunc {
 	config := generated.Config{Resolvers: &graph.Resolver{}}
 
 	config.Directives.IsAuthenticated = directives.IsAuthenticated
+	config.Directives.AtTheEvent = directives.AtTheEvent
 
 	srv := handler.NewDefaultServer(generated.NewExecutableSchema(config))
 

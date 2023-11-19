@@ -154,7 +154,7 @@ type ComplexityRoot struct {
 		UpdatePost       func(childComplexity int, updatePost customTypes.UpdatePostInput) int
 		UpdateSetting    func(childComplexity int, setting customTypes.UpdateSettingInput) int
 		UpdateUser       func(childComplexity int, updateUser customTypes.UpdateUserArgs) int
-		ValidateOtp      func(childComplexity int, code string, email string, username string) int
+		ValidateOtp      func(childComplexity int, code string, email string, username string, setting *customTypes.SettingInput) int
 	}
 
 	Point struct {
@@ -233,7 +233,7 @@ type ComplexityRoot struct {
 
 type MutationResolver interface {
 	UpdateUser(ctx context.Context, updateUser customTypes.UpdateUserArgs) (bool, error)
-	ValidateOtp(ctx context.Context, code string, email string, username string) (*customTypes.UserRes, error)
+	ValidateOtp(ctx context.Context, code string, email string, username string, setting *customTypes.SettingInput) (*customTypes.UserRes, error)
 	RefreshToken(ctx context.Context) (*customTypes.Tokens, error)
 	AddAutomation(ctx context.Context, automation customTypes.AddAutomationInput) (bool, error)
 	RemoveAutomation(ctx context.Context, automation customTypes.RemoveAutomationInput) (bool, error)
@@ -859,7 +859,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.ValidateOtp(childComplexity, args["code"].(string), args["email"].(string), args["username"].(string)), true
+		return e.complexity.Mutation.ValidateOtp(childComplexity, args["code"].(string), args["email"].(string), args["username"].(string), args["setting"].(*customTypes.SettingInput)), true
 
 	case "Point.coordinates":
 		if e.complexity.Point.Coordinates == nil {
@@ -1235,13 +1235,13 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputAddBadgeInput,
 		ec.unmarshalInputCreateEventInput,
 		ec.unmarshalInputCreatePostInput,
-		ec.unmarshalInputCreateUserArgs,
 		ec.unmarshalInputInviteInput,
 		ec.unmarshalInputPrivacyInput,
 		ec.unmarshalInputReactionTypeInput,
 		ec.unmarshalInputRemoveAutomationInput,
 		ec.unmarshalInputRemoveEventInput,
 		ec.unmarshalInputRemovePostInput,
+		ec.unmarshalInputSettingInput,
 		ec.unmarshalInputUpdateBadgeInput,
 		ec.unmarshalInputUpdateEventInput,
 		ec.unmarshalInputUpdatePostInput,
@@ -1647,7 +1647,7 @@ type Query {
 
 type Mutation {
   updateUser(updateUser: UpdateUserArgs!): Boolean! @isAuthenticated()
-  validateOtp(code: String!, email: String!, username: String!): UserRes!
+  validateOtp(code: String!, email: String!, username: String!, setting: SettingInput): UserRes!
   refreshToken: Tokens!
   addAutomation(automation: AddAutomationInput!): Boolean! @isAuthenticated()
   removeAutomation(automation: RemoveAutomationInput!): Boolean! @isAuthenticated()
@@ -1673,10 +1673,16 @@ input UpdateUserArgs {
   refreshToken: String
 }
 
-input CreateUserArgs {
-  username: String!
-  password: String!
-  email: String!
+input SettingInput {
+  privacy: PrivacyInput
+  colorMode: ColorMode
+}
+
+input PrivacyInput {
+  shareLocation: UserPrivacy
+  reactionOnPost: UserPrivacy
+  joinPost: UserPrivacy
+  friendRequest: UserPrivacy
 }
 
 input AddAutomationInput {
@@ -1697,13 +1703,6 @@ input RemoveAutomationInput {
 input UpdateSettingInput {
   privacy: PrivacyInput
   colorMode: ColorMode
-}
-
-input PrivacyInput {
-  shareLocation: UserPrivacy!
-  reactionOnPost: UserPrivacy!
-  joinPost: UserPrivacy!
-  friendRequest: UserPrivacy!
 }
 
 input AddBadgeInput {
@@ -1958,6 +1957,15 @@ func (ec *executionContext) field_Mutation_validateOtp_args(ctx context.Context,
 		}
 	}
 	args["username"] = arg2
+	var arg3 *customTypes.SettingInput
+	if tmp, ok := rawArgs["setting"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("setting"))
+		arg3, err = ec.unmarshalOSettingInput2ᚖpartiesᚑappᚋbackendᚋgraphᚋcustomTypesᚐSettingInput(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["setting"] = arg3
 	return args, nil
 }
 
@@ -4861,7 +4869,7 @@ func (ec *executionContext) _Mutation_validateOtp(ctx context.Context, field gra
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().ValidateOtp(rctx, fc.Args["code"].(string), fc.Args["email"].(string), fc.Args["username"].(string))
+		return ec.resolvers.Mutation().ValidateOtp(rctx, fc.Args["code"].(string), fc.Args["email"].(string), fc.Args["username"].(string), fc.Args["setting"].(*customTypes.SettingInput))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -10678,53 +10686,6 @@ func (ec *executionContext) unmarshalInputCreatePostInput(ctx context.Context, o
 	return it, nil
 }
 
-func (ec *executionContext) unmarshalInputCreateUserArgs(ctx context.Context, obj interface{}) (customTypes.CreateUserArgs, error) {
-	var it customTypes.CreateUserArgs
-	asMap := map[string]interface{}{}
-	for k, v := range obj.(map[string]interface{}) {
-		asMap[k] = v
-	}
-
-	fieldsInOrder := [...]string{"username", "password", "email"}
-	for _, k := range fieldsInOrder {
-		v, ok := asMap[k]
-		if !ok {
-			continue
-		}
-		switch k {
-		case "username":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("username"))
-			data, err := ec.unmarshalNString2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Username = data
-		case "password":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("password"))
-			data, err := ec.unmarshalNString2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Password = data
-		case "email":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("email"))
-			data, err := ec.unmarshalNString2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Email = data
-		}
-	}
-
-	return it, nil
-}
-
 func (ec *executionContext) unmarshalInputInviteInput(ctx context.Context, obj interface{}) (customTypes.InviteInput, error) {
 	var it customTypes.InviteInput
 	asMap := map[string]interface{}{}
@@ -10772,7 +10733,7 @@ func (ec *executionContext) unmarshalInputPrivacyInput(ctx context.Context, obj 
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("shareLocation"))
-			data, err := ec.unmarshalNUserPrivacy2partiesᚑappᚋbackendᚋgraphᚋcustomTypesᚐUserPrivacy(ctx, v)
+			data, err := ec.unmarshalOUserPrivacy2ᚖpartiesᚑappᚋbackendᚋgraphᚋcustomTypesᚐUserPrivacy(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -10781,7 +10742,7 @@ func (ec *executionContext) unmarshalInputPrivacyInput(ctx context.Context, obj 
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("reactionOnPost"))
-			data, err := ec.unmarshalNUserPrivacy2partiesᚑappᚋbackendᚋgraphᚋcustomTypesᚐUserPrivacy(ctx, v)
+			data, err := ec.unmarshalOUserPrivacy2ᚖpartiesᚑappᚋbackendᚋgraphᚋcustomTypesᚐUserPrivacy(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -10790,7 +10751,7 @@ func (ec *executionContext) unmarshalInputPrivacyInput(ctx context.Context, obj 
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("joinPost"))
-			data, err := ec.unmarshalNUserPrivacy2partiesᚑappᚋbackendᚋgraphᚋcustomTypesᚐUserPrivacy(ctx, v)
+			data, err := ec.unmarshalOUserPrivacy2ᚖpartiesᚑappᚋbackendᚋgraphᚋcustomTypesᚐUserPrivacy(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -10799,7 +10760,7 @@ func (ec *executionContext) unmarshalInputPrivacyInput(ctx context.Context, obj 
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("friendRequest"))
-			data, err := ec.unmarshalNUserPrivacy2partiesᚑappᚋbackendᚋgraphᚋcustomTypesᚐUserPrivacy(ctx, v)
+			data, err := ec.unmarshalOUserPrivacy2ᚖpartiesᚑappᚋbackendᚋgraphᚋcustomTypesᚐUserPrivacy(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -10929,6 +10890,44 @@ func (ec *executionContext) unmarshalInputRemovePostInput(ctx context.Context, o
 				return it, err
 			}
 			it.ID = data
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputSettingInput(ctx context.Context, obj interface{}) (customTypes.SettingInput, error) {
+	var it customTypes.SettingInput
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"privacy", "colorMode"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "privacy":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("privacy"))
+			data, err := ec.unmarshalOPrivacyInput2ᚖpartiesᚑappᚋbackendᚋgraphᚋcustomTypesᚐPrivacyInput(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Privacy = data
+		case "colorMode":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("colorMode"))
+			data, err := ec.unmarshalOColorMode2ᚖpartiesᚑappᚋbackendᚋgraphᚋcustomTypesᚐColorMode(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ColorMode = data
 		}
 	}
 
@@ -14282,6 +14281,14 @@ func (ec *executionContext) marshalOReaction2ᚕᚖpartiesᚑappᚋbackendᚋgra
 	return ret
 }
 
+func (ec *executionContext) unmarshalOSettingInput2ᚖpartiesᚑappᚋbackendᚋgraphᚋcustomTypesᚐSettingInput(ctx context.Context, v interface{}) (*customTypes.SettingInput, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputSettingInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) unmarshalOString2ᚕstringᚄ(ctx context.Context, v interface{}) ([]string, error) {
 	if v == nil {
 		return nil, nil
@@ -14350,6 +14357,22 @@ func (ec *executionContext) marshalOTime2ᚖtimeᚐTime(ctx context.Context, sel
 	}
 	res := graphql.MarshalTime(*v)
 	return res
+}
+
+func (ec *executionContext) unmarshalOUserPrivacy2ᚖpartiesᚑappᚋbackendᚋgraphᚋcustomTypesᚐUserPrivacy(ctx context.Context, v interface{}) (*customTypes.UserPrivacy, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var res = new(customTypes.UserPrivacy)
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOUserPrivacy2ᚖpartiesᚑappᚋbackendᚋgraphᚋcustomTypesᚐUserPrivacy(ctx context.Context, sel ast.SelectionSet, v *customTypes.UserPrivacy) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return v
 }
 
 func (ec *executionContext) unmarshalOWeekDays2ᚕpartiesᚑappᚋbackendᚋgraphᚋcustomTypesᚐWeekDaysᚄ(ctx context.Context, v interface{}) ([]customTypes.WeekDays, error) {

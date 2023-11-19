@@ -90,6 +90,15 @@ func UpdateRefreshToken(userId primitive.ObjectID, token string) error {
 	return nil
 }
 
+func AddEventToUser(userId primitive.ObjectID, eventId primitive.ObjectID) error {
+	_, err := UserCollection.UpdateOne(Context, bson.D{{Key: "_id", Value: userId}}, bson.D{{Key: "$push", Value: bson.D{{Key: "events", Value: eventId}}}})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func UpdateUser(userId primitive.ObjectID, newUser customTypes.UpdateUserArgs) error {
 	_, err := UserCollection.UpdateOne(Context, bson.D{{Key: "_id", Value: userId}}, bson.D{{Key: "$set", Value: newUser}})
 	if err != nil {
