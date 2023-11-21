@@ -179,16 +179,17 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		GetEvent         func(childComplexity int, id string) int
-		GetLocalEvent    func(childComplexity int, lat string, long string) int
-		GetLocationData  func(childComplexity int, lat string, long string) int
-		GetUserByID      func(childComplexity int, id string) int
-		GetUserByName    func(childComplexity int, username string) int
-		GetUserEventByID func(childComplexity int, userID string, id string) int
-		GetUserEvents    func(childComplexity int, userID string) int
-		Logout           func(childComplexity int) int
-		Me               func(childComplexity int) int
-		RequestLogin     func(childComplexity int, email string) int
+		GetEvent                 func(childComplexity int, id string) int
+		GetLocalEvent            func(childComplexity int, lat string, long string) int
+		GetLocationDataByAddress func(childComplexity int, address string) int
+		GetLocationDataByPoint   func(childComplexity int, lat string, long string) int
+		GetUserByID              func(childComplexity int, id string) int
+		GetUserByName            func(childComplexity int, username string) int
+		GetUserEventByID         func(childComplexity int, userID string, id string) int
+		GetUserEvents            func(childComplexity int, userID string) int
+		Logout                   func(childComplexity int) int
+		Me                       func(childComplexity int) int
+		RequestLogin             func(childComplexity int, email string) int
 	}
 
 	Reaction struct {
@@ -254,7 +255,8 @@ type QueryResolver interface {
 	Me(ctx context.Context) (*customTypes.User, error)
 	RequestLogin(ctx context.Context, email string) (bool, error)
 	Logout(ctx context.Context) (bool, error)
-	GetLocationData(ctx context.Context, lat string, long string) (*customTypes.Location, error)
+	GetLocationDataByAddress(ctx context.Context, address string) (*customTypes.Location, error)
+	GetLocationDataByPoint(ctx context.Context, lat string, long string) (*customTypes.Location, error)
 	GetUserEvents(ctx context.Context, userID string) ([]*customTypes.Event, error)
 	GetUserEventByID(ctx context.Context, userID string, id string) (*customTypes.Event, error)
 	GetLocalEvent(ctx context.Context, lat string, long string) ([]*customTypes.Event, error)
@@ -969,17 +971,29 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.GetLocalEvent(childComplexity, args["lat"].(string), args["long"].(string)), true
 
-	case "Query.getLocationData":
-		if e.complexity.Query.GetLocationData == nil {
+	case "Query.getLocationDataByAddress":
+		if e.complexity.Query.GetLocationDataByAddress == nil {
 			break
 		}
 
-		args, err := ec.field_Query_getLocationData_args(context.TODO(), rawArgs)
+		args, err := ec.field_Query_getLocationDataByAddress_args(context.TODO(), rawArgs)
 		if err != nil {
 			return 0, false
 		}
 
-		return e.complexity.Query.GetLocationData(childComplexity, args["lat"].(string), args["long"].(string)), true
+		return e.complexity.Query.GetLocationDataByAddress(childComplexity, args["address"].(string)), true
+
+	case "Query.getLocationDataByPoint":
+		if e.complexity.Query.GetLocationDataByPoint == nil {
+			break
+		}
+
+		args, err := ec.field_Query_getLocationDataByPoint_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.GetLocationDataByPoint(childComplexity, args["lat"].(string), args["long"].(string)), true
 
 	case "Query.getUserById":
 		if e.complexity.Query.GetUserByID == nil {
@@ -1638,7 +1652,8 @@ type Query {
   me: User! @isAuthenticated()
   requestLogin(email: String!): Boolean!
   logout: Boolean! @isAuthenticated()
-  getLocationData(lat: String!, long: String!): Location! @isAuthenticated()
+  getLocationDataByAddress(address: String!): Location! @isAuthenticated()
+  getLocationDataByPoint(lat: String!, long: String!): Location! @isAuthenticated()
   getUserEvents(userId: String!): [Event]! @isAuthenticated()
   getUserEventById(userId: String!, id: String!): Event! @isAuthenticated()
   getLocalEvent(lat: String!, long: String!): [Event]! @isAuthenticated()
@@ -2023,7 +2038,22 @@ func (ec *executionContext) field_Query_getLocalEvent_args(ctx context.Context, 
 	return args, nil
 }
 
-func (ec *executionContext) field_Query_getLocationData_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+func (ec *executionContext) field_Query_getLocationDataByAddress_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["address"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("address"))
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["address"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_getLocationDataByPoint_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
 	var arg0 string
@@ -6867,8 +6897,8 @@ func (ec *executionContext) fieldContext_Query_logout(ctx context.Context, field
 	return fc, nil
 }
 
-func (ec *executionContext) _Query_getLocationData(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Query_getLocationData(ctx, field)
+func (ec *executionContext) _Query_getLocationDataByAddress(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_getLocationDataByAddress(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -6882,7 +6912,7 @@ func (ec *executionContext) _Query_getLocationData(ctx context.Context, field gr
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Query().GetLocationData(rctx, fc.Args["lat"].(string), fc.Args["long"].(string))
+			return ec.resolvers.Query().GetLocationDataByAddress(rctx, fc.Args["address"].(string))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.IsAuthenticated == nil {
@@ -6918,7 +6948,7 @@ func (ec *executionContext) _Query_getLocationData(ctx context.Context, field gr
 	return ec.marshalNLocation2ᚖpartiesᚑappᚋbackendᚋgraphᚋcustomTypesᚐLocation(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Query_getLocationData(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Query_getLocationDataByAddress(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Query",
 		Field:      field,
@@ -6953,7 +6983,100 @@ func (ec *executionContext) fieldContext_Query_getLocationData(ctx context.Conte
 		}
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Query_getLocationData_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+	if fc.Args, err = ec.field_Query_getLocationDataByAddress_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_getLocationDataByPoint(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_getLocationDataByPoint(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Query().GetLocationDataByPoint(rctx, fc.Args["lat"].(string), fc.Args["long"].(string))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.IsAuthenticated == nil {
+				return nil, errors.New("directive isAuthenticated is not implemented")
+			}
+			return ec.directives.IsAuthenticated(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*customTypes.Location); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *parties-app/backend/graph/customTypes.Location`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*customTypes.Location)
+	fc.Result = res
+	return ec.marshalNLocation2ᚖpartiesᚑappᚋbackendᚋgraphᚋcustomTypesᚐLocation(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_getLocationDataByPoint(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "bbox":
+				return ec.fieldContext_Location_bbox(ctx, field)
+			case "name":
+				return ec.fieldContext_Location_name(ctx, field)
+			case "point":
+				return ec.fieldContext_Location_point(ctx, field)
+			case "address":
+				return ec.fieldContext_Location_address(ctx, field)
+			case "confidence":
+				return ec.fieldContext_Location_confidence(ctx, field)
+			case "entityType":
+				return ec.fieldContext_Location_entityType(ctx, field)
+			case "geocodePoint":
+				return ec.fieldContext_Location_geocodePoint(ctx, field)
+			case "matchCodes":
+				return ec.fieldContext_Location_matchCodes(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Location", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_getLocationDataByPoint_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -12326,7 +12449,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
-		case "getLocationData":
+		case "getLocationDataByAddress":
 			field := field
 
 			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
@@ -12335,7 +12458,29 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
-				res = ec._Query_getLocationData(ctx, field)
+				res = ec._Query_getLocationDataByAddress(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "getLocationDataByPoint":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_getLocationDataByPoint(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}

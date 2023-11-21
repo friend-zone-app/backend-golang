@@ -3,20 +3,19 @@ package config
 import (
 	"log"
 	"os"
-	"strconv"
 
 	"github.com/joho/godotenv"
 )
 
 var (
-	MONGO_URL        string
-	JWT_SECRET       string
-	RF_JWT_SECRET    string
-	IDENTIFY_KEY     string
-	JWT_REFRESH_TIME int64
-	JWT_TIMEOUT_TIME int64
-	SMTP_USERNAME    string
-	SMTP_PASSWORD    string
+	MONGO_URL      string
+	JWT_SECRET     string
+	RF_JWT_SECRET  string
+	IDENTIFY_KEY   string
+	SMTP_USERNAME  string
+	SMTP_PASSWORD  string
+	BING_MAP_API   string
+	GOOGLE_MAP_API string
 )
 
 func init() {
@@ -32,12 +31,6 @@ func init() {
 	RF_JWT_SECRET = os.Getenv("RF_JWT_SECRET")
 	SMTP_PASSWORD = os.Getenv("SMTP_PASSWORD")
 	SMTP_USERNAME = os.Getenv("SMTP_USERNAME")
-	JWT_REFRESH_TIME, err = strconv.ParseInt(os.Getenv("JWT_REFRESH_TIME"), 10, 64)
-	if err != nil {
-		panic(err)
-	}
-	JWT_TIMEOUT_TIME, err = strconv.ParseInt(os.Getenv("JWT_TIMEOUT_TIME"), 10, 64)
-	if err != nil {
-		panic(err)
-	}
+	BING_MAP_API = os.Getenv("BING_MAP_API")
+	GOOGLE_MAP_API = os.Getenv("GOOGLE_MAP_API")
 }

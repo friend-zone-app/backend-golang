@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"parties-app/backend/api"
 	"parties-app/backend/authentication"
 	"parties-app/backend/database"
 	"parties-app/backend/directives"
@@ -347,9 +348,52 @@ func (r *queryResolver) Logout(ctx context.Context) (bool, error) {
 	panic(fmt.Errorf("not implemented: Logout - logout"))
 }
 
-// GetLocationData is the resolver for the getLocationData field.
-func (r *queryResolver) GetLocationData(ctx context.Context, lat string, long string) (*customTypes.Location, error) {
-	panic(fmt.Errorf("not implemented: GetLocationData - getLocationData"))
+// GetLocationDataByAddress is the resolver for the getLocationDataByAddress field.
+func (r *queryResolver) GetLocationDataByAddress(ctx context.Context, address string) (*customTypes.Location, error) {
+	res, err := api.MapAPI.GetAddress(address)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(res.ResourceSets) > 0 {
+		if len(res.ResourceSets[0].Resources) > 0 {
+			resData := res.ResourceSets[0].Resources[0]
+
+			locationData := customTypes.Location{
+				Bbox:       resData.Bbox,
+				Name:       resData.Name,
+				EntityType: resData.EntityType,
+				Point: &customTypes.Point{
+					Coordinates: resData.Point.Coordinates,
+					Type:        resData.Point.Type,
+				},
+				Address: &customTypes.Address{
+					AddressLine:       resData.Address.AddressLine,
+					AdminDistrict:     resData.Address.AdminDistrict,
+					AdminDistrict2:    resData.Address.AdminDistrict2,
+					PostalCode:        resData.Address.PostalCode,
+					CountryRegion:     resData.Address.CountryRegion,
+					FormattedAddress:  resData.Address.FormattedAddress,
+					Locality:          resData.Address.Locality,
+					CountryRegionIso2: resData.Address.CountryRegionIso2,
+					Intersection:      &resData.Address.Interception,
+				},
+				Confidence:   resData.Confidence,
+				GeocodePoint: (*customTypes.GeocodePoint)(&resData.GeocodePoints[0]),
+				MatchCodes:   resData.MatchCodes,
+			}
+			return &locationData, nil
+		} else {
+			return nil, errorHandler.ValidateErrorMessage(http.StatusNotFound, "the address could not be found!")
+		}
+	} else {
+		return nil, errorHandler.ValidateErrorMessage(http.StatusNotFound, "the address could not be found!")
+	}
+}
+
+// GetLocationDataByPoint is the resolver for the getLocationDataByPoint field.
+func (r *queryResolver) GetLocationDataByPoint(ctx context.Context, lat string, long string) (*customTypes.Location, error) {
+	panic(fmt.Errorf("not implemented: GetLocationDataByPoint - getLocationDataByPoint"))
 }
 
 // GetUserEvents is the resolver for the getUserEvents field.
@@ -405,3 +449,13 @@ func (r *Resolver) Query() generated.QueryResolver { return &queryResolver{r} }
 
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
+
+// !!! WARNING !!!
+// The code below was going to be deleted when updating resolvers. It has been copied here so you have
+// one last chance to move it out of harms way if you want. There are two reasons this happens:
+//   - When renaming or deleting a resolver the old code will be put in here. You can safely delete
+//     it when you're done.
+//   - You have helper methods in this file. Move them out to keep these resolver files clean.
+func (r *queryResolver) GetLocationData(ctx context.Context, lat string, long string) (*customTypes.Location, error) {
+	panic(fmt.Errorf("not implemented: GetLocationData - getLocationData"))
+}

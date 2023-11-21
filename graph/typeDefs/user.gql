@@ -105,7 +105,8 @@ type Query {
   me: User! @isAuthenticated()
   requestLogin(email: String!): Boolean!
   logout: Boolean! @isAuthenticated()
-  getLocationData(lat: String!, long: String!): Location! @isAuthenticated()
+  getLocationDataByAddress(address: String!): Location! @isAuthenticated()
+  getLocationDataByPoint(lat: String!, long: String!): Location! @isAuthenticated()
   getUserEvents(userId: String!): [Event]! @isAuthenticated()
   getUserEventById(userId: String!, id: String!): Event! @isAuthenticated()
   getLocalEvent(lat: String!, long: String!): [Event]! @isAuthenticated()
