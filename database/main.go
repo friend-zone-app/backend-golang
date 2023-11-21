@@ -6,16 +6,17 @@ import (
 	"parties-app/backend/config"
 	"time"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 var (
-	Client           *mongo.Client
-	UserCollection   *mongo.Collection
-	PostCollection   *mongo.Collection
-	EventsCollection *mongo.Collection
-	Context          context.Context
+	Client          *mongo.Client
+	UserCollection  *mongo.Collection
+	PostCollection  *mongo.Collection
+	EventCollection *mongo.Collection
+	Context         context.Context
 )
 
 func init() {
@@ -30,7 +31,24 @@ func init() {
 
 	log.Println("Connected to database!")
 
-	UserCollection = Client.Database("PlusOne").Collection("users")
-	PostCollection = Client.Database("PlusOne").Collection("posts")
-	EventsCollection = Client.Database("PlusOne").Collection("events")
+	UserCollection = Client.Database("FriendZone").Collection("users")
+	PostCollection = Client.Database("FriendZone").Collection("posts")
+	EventCollection = Client.Database("FriendZone").Collection("events")
+
+	eventLocationModel := mongo.IndexModel{
+		Keys: bson.D{{Key: "location", Value: "2dsphere"}},
+	}
+	_, err := EventCollection.Indexes().CreateOne(context.TODO(), eventLocationModel)
+	if err != nil {
+		panic(err)
+	}
+
+	userLocationModel := mongo.IndexModel{
+		Keys: bson.D{{Key: "setting.location.eventAutomation.location", Value: "2dsphere"}},
+	}
+
+	_, err = UserCollection.Indexes().CreateOne(context.TODO(), userLocationModel)
+	if err != nil {
+		panic(err)
+	}
 }

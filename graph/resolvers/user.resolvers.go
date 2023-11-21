@@ -10,12 +10,14 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"parties-app/backend/api"
 	"parties-app/backend/authentication"
 	"parties-app/backend/database"
 	"parties-app/backend/directives"
 	"parties-app/backend/errorHandler"
 	"parties-app/backend/graph/customTypes"
 	"parties-app/backend/graph/generated"
+	"strconv"
 	"strings"
 	"time"
 
@@ -40,34 +42,265 @@ func (r *mutationResolver) UpdateUser(ctx context.Context, updateUser customType
 	return true, nil
 }
 
-// Signup is the resolver for the signup field.
-func (r *mutationResolver) Signup(ctx context.Context, createUser customTypes.CreateUserArgs) (*customTypes.User, error) {
-	panic(fmt.Errorf("not implemented: Signup - signup"))
+// ValidateOtp is the resolver for the validateOtp field.
+func (r *mutationResolver) ValidateOtp(ctx context.Context, code string, email string, username string, setting *customTypes.SettingInput) (*customTypes.UserRes, error) {
+	err := authentication.VeritifyEmail(code, email)
+	if err != nil {
+		errMessage := err.Error()
+		if errMessage == "0" {
+			errorHandler.HandleError(ctx, http.StatusNotFound, "The email provided hasn't been request a email verification! (VerifyEmail)")
+			return nil, err
+		} else {
+			errorHandler.HandleError(ctx, http.StatusNotAcceptable, "The verification code provided is expired or incorrect! Please request a new one. (VertifyEmail)")
+			return nil, err
+		}
+	}
+
+	newUserID := primitive.NewObjectID()
+	user, found, err := database.GetUserByEmail(email)
+	if !found && err != nil {
+		errorHandler.HandleError(ctx, http.StatusInternalServerError, "Failed to fetch user with that email address! (GetUserByEmail)")
+		return nil, err
+	} else if !found && err == nil {
+		uniqueUsername, err := database.CreateARandomUsername(username)
+		if err != nil {
+			errorHandler.HandleError(ctx, http.StatusInternalServerError, "Failed to fetch usernames! (CreateARandomUsername)")
+			return nil, err
+		}
+
+		user = &customTypes.User{
+			ID:          newUserID,
+			DisplayName: username,
+			Username:    strings.ToLower(uniqueUsername),
+			Email:       email,
+			CreatedAt:   time.Now(),
+			Setting: &customTypes.Setting{
+				Privacy: &customTypes.Privacy{
+					ShareLocation:  customTypes.UserPrivacyFriends,
+					ReactionOnPost: customTypes.UserPrivacyFriends,
+					JoinPost:       customTypes.UserPrivacyFriends,
+					FriendRequest:  customTypes.UserPrivacyEveryone,
+				},
+				ColorMode: "dark",
+				EventAutomation: []*customTypes.EventAutomation{
+					{
+						ID:          primitive.NewObjectID(),
+						Title:       "Sample Event",
+						Location:    &customTypes.Point{},
+						Description: "Description of the event",
+						StartsAt:    time.Now(),
+						CreatedAt:   time.Now(),
+					},
+				},
+			},
+			Level: 1,
+		}
+
+		ok, err := database.CreateUser(*user)
+		if err != nil || !ok {
+			errorHandler.HandleError(ctx, http.StatusInternalServerError, "Failed to create new user! (CreateUser)")
+			return nil, err
+		}
+	}
+
+	tokens, err := authentication.Sign(user.ID)
+	if err != nil {
+		errorHandler.HandleError(ctx, http.StatusInternalServerError, "Failed to sign a new token (Sign)")
+		return nil, err
+	}
+
+	respond := customTypes.UserRes{
+		User:  user,
+		Token: tokens,
+	}
+
+	return &respond, nil
 }
 
-// UpdateDate is the resolver for the updateDate field.
-func (r *mutationResolver) UpdateDate(ctx context.Context, updateDate customTypes.UpdateDateInput) (bool, error) {
-	panic(fmt.Errorf("not implemented: UpdateDate - updateDate"))
+// RefreshToken is the resolver for the refreshToken field.
+func (r *mutationResolver) RefreshToken(ctx context.Context) (*customTypes.Tokens, error) {
+	request := graphql.GetOperationContext(ctx)
+	headers := request.Headers.Get("Authorization")
+	token, err := authentication.ValidateHeaders(headers)
+	if err != nil {
+		return nil, errorHandler.ValidateErrorMessage(http.StatusBadRequest, *err)
+	}
+
+	claims, valid, parseErr := authentication.ParseRefreshToken(*token)
+	if parseErr != nil {
+		if strings.HasPrefix(parseErr.Error(), "token is expired") {
+			return nil, errorHandler.ValidateErrorMessage(http.StatusRequestTimeout, "The token is expired, please login again!")
+		}
+
+		return nil, errors.New("the refresh token is invalid, please login again")
+	}
+	if !valid || claims == nil {
+		return nil, errors.New("the refresh token is invalid, please login again")
+	}
+
+	userId, converErr := authentication.ConvertUserIDStringToObjectID(claims.ID)
+	if converErr != nil {
+		errorHandler.HandleError(ctx, http.StatusInternalServerError, "The user id that been signed is invalid, please login again!")
+		return nil, converErr
+	}
+
+	tokens, converErr := authentication.Sign(*userId)
+	if converErr != nil {
+		errorHandler.HandleError(ctx, http.StatusInternalServerError, "Failed to sign a new access token and refresh token.")
+		return nil, converErr
+	}
+
+	return &customTypes.Tokens{
+		AccessToken:  tokens.AccessToken,
+		RefreshToken: tokens.RefreshToken,
+	}, nil
 }
 
-// RemoveDate is the resolver for the removeDate field.
-func (r *mutationResolver) RemoveDate(ctx context.Context, removeDate customTypes.RemoveDateInput) (bool, error) {
-	panic(fmt.Errorf("not implemented: RemoveDate - removeDate"))
+// AddAutomation is the resolver for the addAutomation field.
+func (r *mutationResolver) AddAutomation(ctx context.Context, automation customTypes.AddAutomationInput) (bool, error) {
+	panic(fmt.Errorf("not implemented: AddAutomation - addAutomation"))
 }
 
-// CreateDate is the resolver for the createDate field.
-func (r *mutationResolver) CreateDate(ctx context.Context, createDate customTypes.CreateDateInput) (bool, error) {
-	panic(fmt.Errorf("not implemented: CreateDate - createDate"))
+// RemoveAutomation is the resolver for the removeAutomation field.
+func (r *mutationResolver) RemoveAutomation(ctx context.Context, automation customTypes.RemoveAutomationInput) (bool, error) {
+	panic(fmt.Errorf("not implemented: RemoveAutomation - removeAutomation"))
+}
+
+// UpdateSetting is the resolver for the updateSetting field.
+func (r *mutationResolver) UpdateSetting(ctx context.Context, setting customTypes.UpdateSettingInput) (bool, error) {
+	panic(fmt.Errorf("not implemented: UpdateSetting - updateSetting"))
+}
+
+// UpdatePost is the resolver for the updatePost field.
+func (r *mutationResolver) UpdatePost(ctx context.Context, updatePost customTypes.UpdatePostInput) (bool, error) {
+	panic(fmt.Errorf("not implemented: UpdatePost - updatePost"))
+}
+
+// RemovePost is the resolver for the removePost field.
+func (r *mutationResolver) RemovePost(ctx context.Context, removePost customTypes.RemovePostInput) (bool, error) {
+	panic(fmt.Errorf("not implemented: RemovePost - removePost"))
+}
+
+// CreatePost is the resolver for the createPost field.
+func (r *mutationResolver) CreatePost(ctx context.Context, createPost customTypes.CreatePostInput) (bool, error) {
+	panic(fmt.Errorf("not implemented: CreatePost - createPost"))
+}
+
+// AddReaction is the resolver for the addReaction field.
+func (r *mutationResolver) AddReaction(ctx context.Context, postID string, reactionType customTypes.ReactionTypeInput) (bool, error) {
+	panic(fmt.Errorf("not implemented: AddReaction - addReaction"))
+}
+
+// CreateEvent is the resolver for the createEvent field.
+func (r *mutationResolver) CreateEvent(ctx context.Context, createEvent customTypes.CreateEventInput) (*customTypes.Event, error) {
+	userId := directives.ForContext(ctx)
+	if len(userId) < 5 {
+		errorHandler.HandleError(ctx, http.StatusNotAcceptable, "The authorization header is not found! (ForContext)")
+		return nil, errors.New("the authorization header is not found (ForContext)")
+	}
+	id, err := authentication.ConvertUserIDStringToObjectID(userId)
+	if err != nil {
+		errorHandler.HandleError(ctx, http.StatusNotAcceptable, "The user id provided is invalid! (ConvertUserIDStringToObjectID)")
+		return nil, err
+	}
+
+	inviters := make([]*customTypes.Invite, len(createEvent.Inviters))
+
+	for _, v := range createEvent.Inviters {
+		id, err := authentication.ConvertUserIDStringToObjectID(v.InviteTo)
+		if err != nil {
+			return nil, err
+		}
+
+		inviter := customTypes.Invite{
+			Status:    false,
+			InviteTo:  *id,
+			CreatedAt: time.Now(),
+		}
+		inviters = append(inviters, &inviter)
+	}
+
+	newEvent := customTypes.Event{
+		ID:          primitive.NewObjectID(),
+		Author:      *id,
+		Title:       createEvent.Title,
+		Description: createEvent.Title,
+		Location: &customTypes.Point{
+			Type:        "Point",
+			Coordinates: []float64{*createEvent.Location[0], *createEvent.Location[1]},
+		},
+		StartsAt:  createEvent.StartsAt,
+		EndsAt:    createEvent.EndsAt,
+		Inviters:  inviters,
+		CreatedAt: time.Now(),
+		Type:      createEvent.Type,
+		Privacy: &customTypes.EventPrivacy{
+			WhoCanJoin: customTypes.WhoCanJoinLocal,
+			WhoCanSee:  customTypes.WhoCanSeeFriends,
+		},
+	}
+
+	_, err = database.CreateEvent(newEvent)
+	if err != nil {
+		return nil, err
+	}
+
+	return &newEvent, nil
+}
+
+// RemoveEvent is the resolver for the removeEvent field.
+func (r *mutationResolver) RemoveEvent(ctx context.Context, removeEvent customTypes.RemoveEventInput) (bool, error) {
+	panic(fmt.Errorf("not implemented: RemoveEvent - removeEvent"))
+}
+
+// UpdateEvent is the resolver for the updateEvent field.
+func (r *mutationResolver) UpdateEvent(ctx context.Context, updateEvent customTypes.UpdateEventInput) (*customTypes.Event, error) {
+	panic(fmt.Errorf("not implemented: UpdateEvent - updateEvent"))
+}
+
+// AddBadge is the resolver for the addBadge field.
+func (r *mutationResolver) AddBadge(ctx context.Context, badge customTypes.AddBadgeInput) (bool, error) {
+	panic(fmt.Errorf("not implemented: AddBadge - addBadge"))
+}
+
+// UpdateBadge is the resolver for the updateBadge field.
+func (r *mutationResolver) UpdateBadge(ctx context.Context, badge customTypes.UpdateBadgeInput) (bool, error) {
+	panic(fmt.Errorf("not implemented: UpdateBadge - updateBadge"))
 }
 
 // GetUserByID is the resolver for the getUserById field.
-func (r *queryResolver) GetUserByID(ctx context.Context, id primitive.ObjectID) (*customTypes.SensoredUser, error) {
-	panic(fmt.Errorf("not implemented: GetUserByID - getUserById"))
+func (r *queryResolver) GetUserByID(ctx context.Context, id string) (*customTypes.User, error) {
+	userId, err := authentication.ConvertUserIDStringToObjectID(id)
+	if err != nil {
+		errorHandler.HandleError(ctx, http.StatusNotAcceptable, "The user id provided is invalid! (ConvertUserIDStringToObjectID)")
+		return nil, err
+	}
+	user, found, err := database.GetUserByID(*userId)
+	if !found && err != nil {
+		errorHandler.HandleError(ctx, http.StatusInternalServerError, "Failed to fetch user (GetUserByID)")
+		fmt.Println(userId)
+		return nil, err
+	} else if !found && err == nil {
+		errorHandler.HandleError(ctx, http.StatusNotFound, "User with that ID doesn't exist (GetUserByID)")
+		fmt.Println(userId)
+		return nil, err
+	}
+
+	return user, nil
 }
 
 // GetUserByName is the resolver for the getUserByName field.
-func (r *queryResolver) GetUserByName(ctx context.Context, username string) (*customTypes.SensoredUser, error) {
-	panic(fmt.Errorf("not implemented: GetUserByName - getUserByName"))
+func (r *queryResolver) GetUserByName(ctx context.Context, username string) (*customTypes.User, error) {
+	user, found, err := database.GetUserByUsername(username)
+	if !found && err != nil {
+		errorHandler.HandleError(ctx, http.StatusInternalServerError, "Failed to fetch user (GetUserByID)")
+		return nil, err
+	} else if !found && err == nil {
+		errorHandler.HandleError(ctx, http.StatusNotFound, "User with that ID doesn't exist (GetUserByID)")
+		return nil, err
+	}
+
+	return user, nil
 }
 
 // Me is the resolver for the me field.
@@ -110,122 +343,102 @@ func (r *queryResolver) RequestLogin(ctx context.Context, email string) (bool, e
 	return true, nil
 }
 
-// ValidateOtp is the resolver for the validateOtp field.
-func (r *queryResolver) ValidateOtp(ctx context.Context, code string, email string, username string) (*customTypes.UserRes, error) {
-	err := authentication.VeritifyEmail(code, email)
-	if err != nil {
-		errMessage := err.Error()
-		if errMessage == "0" {
-			errorHandler.HandleError(ctx, http.StatusNotFound, "The email provided hasn't been request a email verification! (VerifyEmail)")
-			return nil, err
-		} else {
-			errorHandler.HandleError(ctx, http.StatusNotAcceptable, "The verification code provided is expired or incorrect! Please request a new one. (VertifyEmail)")
-			return nil, err
-		}
-	}
-
-	newUserID := primitive.NewObjectID()
-	user, found, err := database.GetUserByEmail(email)
-	if !found && err != nil {
-		errorHandler.HandleError(ctx, http.StatusInternalServerError, "Failed to fetch user with that email address! (GetUserByEmail)")
-		return nil, err
-	} else if !found && err == nil {
-		uniqueUsername, err := database.CreateARandomUsername(username)
-		if err != nil {
-			errorHandler.HandleError(ctx, http.StatusInternalServerError, "Failed to fetch usernames! (CreateARandomUsername)")
-			return nil, err
-		}
-
-		user = &customTypes.User{
-			ID:           newUserID,
-			DisplayName:  username,
-			Username:     uniqueUsername,
-			Email:        email,
-			CreatedAt:    time.Now(),
-			Salt:         authentication.GenerateRandomSalt(10),
-			LastSignedIn: time.Now(),
-		}
-
-		ok, err := database.CreateUser(*user)
-		if err != nil || !ok {
-			errorHandler.HandleError(ctx, http.StatusInternalServerError, "Failed to create new user! (CreateUser)")
-			return nil, err
-		}
-	}
-
-	tokens, err := authentication.Sign(user.ID)
-	if err != nil {
-		errorHandler.HandleError(ctx, http.StatusInternalServerError, "Failed to sign a new token (Sign)")
-		return nil, err
-	}
-
-	respond := customTypes.UserRes{
-		User:  user,
-		Token: tokens,
-	}
-
-	return &respond, nil
-}
-
 // Logout is the resolver for the logout field.
 func (r *queryResolver) Logout(ctx context.Context) (bool, error) {
 	panic(fmt.Errorf("not implemented: Logout - logout"))
 }
 
-// RefreshToken is the resolver for the refreshToken field.
-func (r *queryResolver) RefreshToken(ctx context.Context) (*customTypes.Tokens, error) {
-	fmt.Println("Refreshed")
-
-	request := graphql.GetOperationContext(ctx)
-	headers := request.Headers.Get("Authorization")
-	token, err := authentication.ValidateHeaders(headers)
+// GetLocationDataByAddress is the resolver for the getLocationDataByAddress field.
+func (r *queryResolver) GetLocationDataByAddress(ctx context.Context, address string) (*customTypes.Location, error) {
+	res, err := api.MapAPI.GetAddress(address)
 	if err != nil {
-		return nil, errorHandler.ValidateErrorMessage(http.StatusBadRequest, *err)
+		return nil, err
 	}
 
-	claims, valid, parseErr := authentication.ParseRefreshToken(*token)
-	if parseErr != nil {
-		if strings.HasPrefix(parseErr.Error(), "token is expired") {
-			return nil, errorHandler.ValidateErrorMessage(http.StatusRequestTimeout, "The token is expired, please login again!")
+	if len(res.ResourceSets) > 0 {
+		if len(res.ResourceSets[0].Resources) > 0 {
+			resData := res.ResourceSets[0].Resources[0]
+
+			locationData := customTypes.Location{
+				Bbox:       resData.Bbox,
+				Name:       resData.Name,
+				EntityType: resData.EntityType,
+				Point: &customTypes.Point{
+					Coordinates: resData.Point.Coordinates,
+					Type:        resData.Point.Type,
+				},
+				Address: &customTypes.Address{
+					AddressLine:       resData.Address.AddressLine,
+					AdminDistrict:     resData.Address.AdminDistrict,
+					AdminDistrict2:    resData.Address.AdminDistrict2,
+					PostalCode:        resData.Address.PostalCode,
+					CountryRegion:     resData.Address.CountryRegion,
+					FormattedAddress:  resData.Address.FormattedAddress,
+					Locality:          resData.Address.Locality,
+					CountryRegionIso2: resData.Address.CountryRegionIso2,
+					Intersection:      &resData.Address.Interception,
+				},
+				Confidence:   resData.Confidence,
+				GeocodePoint: (*customTypes.GeocodePoint)(&resData.GeocodePoints[0]),
+				MatchCodes:   resData.MatchCodes,
+			}
+			return &locationData, nil
+		} else {
+			return nil, errorHandler.ValidateErrorMessage(http.StatusNotFound, "the address could not be found!")
 		}
-
-		return nil, errors.New("the refresh token is invalid, please login again")
+	} else {
+		return nil, errorHandler.ValidateErrorMessage(http.StatusNotFound, "the address could not be found!")
 	}
-	if !valid || claims == nil {
-		return nil, errors.New("the refresh token is invalid, please login again")
-	}
-
-	userId, converErr := authentication.ConvertUserIDStringToObjectID(claims.ID)
-	if converErr != nil {
-		errorHandler.HandleError(ctx, http.StatusInternalServerError, "The user id that been signed is invalid, please login again!")
-		return nil, converErr
-	}
-
-	tokens, converErr := authentication.Sign(*userId)
-	if converErr != nil {
-		errorHandler.HandleError(ctx, http.StatusInternalServerError, "Failed to sign a new access token and refresh token.")
-		return nil, converErr
-	}
-
-	return &customTypes.Tokens{
-		AccessToken:  tokens.AccessToken,
-		RefreshToken: tokens.RefreshToken,
-	}, nil
 }
 
-// GetEvents is the resolver for the getEvents field.
-func (r *queryResolver) GetEvents(ctx context.Context, username string, duration *string) ([]*customTypes.Event, error) {
-	panic(fmt.Errorf("not implemented: GetEvents - getEvents"))
+// GetLocationDataByPoint is the resolver for the getLocationDataByPoint field.
+func (r *queryResolver) GetLocationDataByPoint(ctx context.Context, lat string, long string) (*customTypes.Location, error) {
+	panic(fmt.Errorf("not implemented: GetLocationDataByPoint - getLocationDataByPoint"))
 }
 
-// GetEventByID is the resolver for the getEventById field.
-func (r *queryResolver) GetEventByID(ctx context.Context, username string, id string) (*customTypes.Event, error) {
-	panic(fmt.Errorf("not implemented: GetEventByID - getEventById"))
+// GetUserEvents is the resolver for the getUserEvents field.
+func (r *queryResolver) GetUserEvents(ctx context.Context, userID string) ([]*customTypes.Event, error) {
+	id, err := authentication.ConvertUserIDStringToObjectID(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	events, err := database.GetUserEvents(*id)
+	if err != nil {
+		return nil, err
+	}
+
+	return events, nil
 }
 
-// GetLocationData is the resolver for the getLocationData field.
-func (r *queryResolver) GetLocationData(ctx context.Context, lat string, long string) (*customTypes.Location, error) {
-	panic(fmt.Errorf("not implemented: GetLocationData - getLocationData"))
+// GetUserEventByID is the resolver for the getUserEventById field.
+func (r *queryResolver) GetUserEventByID(ctx context.Context, userID string, id string) (*customTypes.Event, error) {
+	panic(fmt.Errorf("not implemented: GetUserEventByID - getUserEventById"))
+}
+
+// GetLocalEvent is the resolver for the getLocalEvent field.
+func (r *queryResolver) GetLocalEvent(ctx context.Context, lat string, long string) ([]*customTypes.Event, error) {
+	newLat, err := strconv.ParseFloat(lat, 64)
+	if err != nil {
+		return nil, err
+	}
+
+	newLong, err := strconv.ParseFloat(long, 64)
+	if err != nil {
+		return nil, err
+	}
+
+	events, err := database.GetLocalEvent(newLat, newLong)
+	if err != nil {
+		return nil, err
+	}
+
+	return events, nil
+}
+
+// GetEvent is the resolver for the getEvent field.
+func (r *queryResolver) GetEvent(ctx context.Context, id string) (*customTypes.Event, error) {
+	panic(fmt.Errorf("not implemented: GetEvent - getEvent"))
 }
 
 // Mutation returns generated.MutationResolver implementation.
@@ -236,3 +449,13 @@ func (r *Resolver) Query() generated.QueryResolver { return &queryResolver{r} }
 
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
+
+// !!! WARNING !!!
+// The code below was going to be deleted when updating resolvers. It has been copied here so you have
+// one last chance to move it out of harms way if you want. There are two reasons this happens:
+//   - When renaming or deleting a resolver the old code will be put in here. You can safely delete
+//     it when you're done.
+//   - You have helper methods in this file. Move them out to keep these resolver files clean.
+func (r *queryResolver) GetLocationData(ctx context.Context, lat string, long string) (*customTypes.Location, error) {
+	panic(fmt.Errorf("not implemented: GetLocationData - getLocationData"))
+}

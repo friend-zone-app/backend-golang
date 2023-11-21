@@ -1,0 +1,131 @@
+"""date"""
+type Event {
+  _id: ObjectID!
+  author: ObjectID!
+  title: String!
+  description: String!
+  location: Point!
+  startsAt: Time!
+  endsAt: Time
+  createdAt: Time!
+  inviters: [Invite!]
+  type: EventType!
+  privacy: EventPrivacy
+}
+
+type EventPrivacy {
+  whoCanJoin: WhoCanJoin!
+  whoCanSee: WhoCanSee!
+}
+
+enum WhoCanJoin {
+  LOCAL
+  INVITE
+  APPROVAL
+}
+
+enum WhoCanSee {
+  FRIENDS
+  FRIENDS_OF_FRIENDS
+  EVERYONE
+  PARTICIPANTS
+  ONLY_FRIENDS
+  ONLY_FRIENDS_OF_FRIENDS
+}
+
+type Post {
+  parentEvent: ObjectID!
+  author: ObjectID!
+  reactions: [Reaction!]
+  imageUri: String!
+  currentEmotion: ReactionType!
+  title: String
+}
+
+enum EventType {
+  SCHOOL
+  WORK
+  PARTY
+  FESTIVAL
+  DATE
+  BIRTHDAY
+  CELEBRATION
+}
+
+type Invite {
+  status: Boolean!
+  inviteTo: ObjectID!
+  createdAt: Time!
+}
+
+type Reaction {
+  reactionType: ReactionType!
+  createdAt: Time!
+  author: ObjectID!
+}
+
+enum ReactionType {
+  HAPPY
+  HAHA
+  OMG
+  WHAT
+  CONFUSE
+  SURPRISED
+}
+
+input CreateEventInput {
+  title: String!
+  description: String!
+  location: [Float]!
+  startsAt: Time!
+  endsAt: Time
+  inviters: [InviteInput!]
+  type: EventType!
+}
+
+input RemoveEventInput {
+  eventId: String!
+}
+
+input UpdateEventInput {
+  eventId: String!
+  title: String
+  description: String
+  location: [Float]
+  startsAt: Time
+  endsAt: Time
+  inviters: [InviteInput!]
+  type: EventType
+}
+
+input UpdatePostInput {
+  query: String!
+  author: String
+  title: String
+  time: Float
+  inviters: [String!]
+  cancelled: Boolean
+  expireIn: Float
+}
+
+input RemovePostInput {
+  username: String!
+  id: String!
+}
+
+input CreatePostInput {
+  title: String!
+  time: Float!
+  inviters: [String!]
+  cancelled: Boolean
+  expireIn: Float
+  location: [Float]!
+}
+
+input ReactionTypeInput {
+  type: ReactionType!
+}
+
+input InviteInput {
+  inviteTo: String!
+}

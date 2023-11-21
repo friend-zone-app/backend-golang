@@ -98,6 +98,8 @@ func ValidateHeaders(header string) (*string, *string) {
 
 func ConvertUserIDStringToObjectID(userIDString string) (*primitive.ObjectID, error) {
 	if strings.HasPrefix(userIDString, "ObjectID") {
+		userIDString = strings.Replace(userIDString, "(", "", 1)
+		userIDString = strings.Replace(userIDString, ")", "", 1)
 		idWithoutPrefix := strings.TrimPrefix(userIDString, "ObjectID")
 		objectID, err := primitive.ObjectIDFromHex(idWithoutPrefix)
 		if err != nil {

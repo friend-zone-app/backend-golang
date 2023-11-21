@@ -1,0 +1,56 @@
+"""
+Interception
+"""
+type Interception {
+    baseStreet: String!
+    secondaryStreet1: String!
+    intersectionType: String!
+    displayName: String!
+}
+
+"""
+Address
+"""
+type Address {
+    addressLine: String!
+    adminDistrict: String!
+    adminDistrict2: String!
+    countryRegion: String!
+    formattedAddress: String!
+    intersection: Interception!
+    locality: String!
+    postalCode: String!
+    countryRegionIso2: String!
+}
+
+"""
+Geocodepoint
+"""
+type GeocodePoint {
+    type: String!
+    coordinates: [Float!]!
+    calculationMethod: String!
+    usageTypes: [String!]!
+}
+
+"""
+Point
+"""
+type Point {
+    type: String!
+    coordinates: [Float!]!
+}
+
+"""
+Location
+"""
+type Location {
+    bbox: [Float!]!
+    name: String!
+    point: Point!
+    address: Address!
+    confidence: String!
+    entityType: String!
+    geocodePoint: GeocodePoint!
+    matchCodes: [String!]!
+}
