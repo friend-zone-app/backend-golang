@@ -18,6 +18,7 @@ type Map struct {
 var (
 	MapURL     string = "https://maps.googleapis.com/maps/api/staticmap?center=%v,%v8&zoom=%v&size=600x600&maptype=%v&key=" + config.GOOGLE_MAP_API
 	AddressURL string = "http://dev.virtualearth.net/REST/v1/Locations/%q?maxResults=1&key=" + config.BING_MAP_API
+	PointURL   string = "http://dev.virtualearth.net/REST/v1/Locations/%q,%q?maxResults=1&key=" + config.BING_MAP_API
 )
 
 func NewMap() Map {
@@ -52,6 +53,33 @@ func (handler Map) Get(lat float64, long float64, zoom int64, maptype string) (*
 
 func (handler Map) GetAddress(query string) (*types.BingRes, error) {
 	url := fmt.Sprintf(AddressURL, query)
+	resp, err := handler.HttpClient.Get(url)
+	if err != nil {
+		return nil, err
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	res := types.BingRes{}
+
+	err = json.Unmarshal(body, &res)
+	if err != nil {
+		return nil, err
+	}
+
+	return &res, nil
+}
+
+func (handler Map) GetPoint(lat string, long string) (*types.BingRes, error) {
+	url := fmt.Sprintf(PointURL, lat, long)
+
+	fmt.Println(url)
+
 	resp, err := handler.HttpClient.Get(url)
 	if err != nil {
 		return nil, err
