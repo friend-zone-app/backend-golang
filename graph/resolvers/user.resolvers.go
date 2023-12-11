@@ -393,7 +393,45 @@ func (r *queryResolver) GetLocationDataByAddress(ctx context.Context, address st
 
 // GetLocationDataByPoint is the resolver for the getLocationDataByPoint field.
 func (r *queryResolver) GetLocationDataByPoint(ctx context.Context, lat string, long string) (*customTypes.Location, error) {
-	panic(fmt.Errorf("not implemented: GetLocationDataByPoint - getLocationDataByPoint"))
+	res, err := api.MapAPI.GetPoint(lat, long)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(res.ResourceSets) > 0 {
+		if len(res.ResourceSets[0].Resources) > 0 {
+			resData := res.ResourceSets[0].Resources[0]
+
+			locationData := customTypes.Location{
+				Bbox:       resData.Bbox,
+				Name:       resData.Name,
+				EntityType: resData.EntityType,
+				Point: &customTypes.Point{
+					Coordinates: resData.Point.Coordinates,
+					Type:        resData.Point.Type,
+				},
+				Address: &customTypes.Address{
+					AddressLine:       resData.Address.AddressLine,
+					AdminDistrict:     resData.Address.AdminDistrict,
+					AdminDistrict2:    resData.Address.AdminDistrict2,
+					PostalCode:        resData.Address.PostalCode,
+					CountryRegion:     resData.Address.CountryRegion,
+					FormattedAddress:  resData.Address.FormattedAddress,
+					Locality:          resData.Address.Locality,
+					CountryRegionIso2: resData.Address.CountryRegionIso2,
+					Intersection:      &resData.Address.Interception,
+				},
+				Confidence:   resData.Confidence,
+				GeocodePoint: (*customTypes.GeocodePoint)(&resData.GeocodePoints[0]),
+				MatchCodes:   resData.MatchCodes,
+			}
+			return &locationData, nil
+		} else {
+			return nil, errorHandler.ValidateErrorMessage(http.StatusNotFound, "the address could not be found!")
+		}
+	} else {
+		return nil, errorHandler.ValidateErrorMessage(http.StatusNotFound, "the address could not be found!")
+	}
 }
 
 // GetUserEvents is the resolver for the getUserEvents field.

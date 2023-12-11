@@ -24,7 +24,7 @@ func Sign(userId primitive.ObjectID) (*customTypes.Tokens, error) {
 		ID: ValidateUserID(userId.Hex()),
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(12 * time.Hour)),
-			Issuer:    "Parties-App",
+			Issuer:    config.IDENTIFY_KEY,
 		},
 	}
 
@@ -32,7 +32,7 @@ func Sign(userId primitive.ObjectID) (*customTypes.Tokens, error) {
 		ID: ValidateUserID(userId.Hex()),
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(14 * 24 * time.Hour)),
-			Issuer:    "Parties-App",
+			Issuer:    config.IDENTIFY_KEY,
 		},
 	}
 
