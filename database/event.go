@@ -92,8 +92,7 @@ func CreateEvent(event customTypes.Event) (bool, error) {
 			"type":        "Point",
 			"coordinates": []float64{event.Location.Coordinates[0], event.Location.Coordinates[1]}, // Replace with actual longitude and latitude values
 		},
-		"startsAt":  event.StartsAt,
-		"endsAt":    event.EndsAt,
+		"image":     event.Image,
 		"createdAt": event.CreatedAt,
 		"inviters":  event.Inviters,
 		"type":      event.Type,

@@ -53,10 +53,9 @@ type CreateEventInput struct {
 	Title       string         `json:"title" bson:"title"`
 	Description string         `json:"description" bson:"description"`
 	Location    []*float64     `json:"location" bson:"location"`
-	StartsAt    time.Time      `json:"startsAt" bson:"startsAt"`
-	EndsAt      *time.Time     `json:"endsAt,omitempty" bson:"endsAt"`
 	Inviters    []*InviteInput `json:"inviters,omitempty" bson:"inviters"`
 	Type        EventType      `json:"type" bson:"type"`
+	Image       string         `json:"image" bson:"image"`
 }
 
 type CreatePostInput struct {
@@ -75,12 +74,11 @@ type Event struct {
 	Title       string             `json:"title" bson:"title"`
 	Description string             `json:"description" bson:"description"`
 	Location    *Point             `json:"location" bson:"location"`
-	StartsAt    time.Time          `json:"startsAt" bson:"startsAt"`
-	EndsAt      *time.Time         `json:"endsAt,omitempty" bson:"endsAt"`
 	CreatedAt   time.Time          `json:"createdAt" bson:"createdAt"`
 	Inviters    []*Invite          `json:"inviters,omitempty" bson:"inviters"`
 	Type        EventType          `json:"type" bson:"type"`
 	Privacy     *EventPrivacy      `json:"privacy,omitempty" bson:"privacy"`
+	Image       string             `json:"image" bson:"image"`
 }
 
 type EventAutomation struct {
@@ -224,10 +222,9 @@ type UpdateEventInput struct {
 	Title       *string        `json:"title,omitempty" bson:"title"`
 	Description *string        `json:"description,omitempty" bson:"description"`
 	Location    []*float64     `json:"location,omitempty" bson:"location"`
-	StartsAt    *time.Time     `json:"startsAt,omitempty" bson:"startsAt"`
-	EndsAt      *time.Time     `json:"endsAt,omitempty" bson:"endsAt"`
 	Inviters    []*InviteInput `json:"inviters,omitempty" bson:"inviters"`
 	Type        *EventType     `json:"type,omitempty" bson:"type"`
+	Image       string         `json:"image" bson:"image"`
 }
 
 type UpdatePostInput struct {
