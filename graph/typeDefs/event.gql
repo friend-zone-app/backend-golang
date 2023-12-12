@@ -5,12 +5,11 @@ type Event {
   title: String!
   description: String!
   location: Point!
-  startsAt: Time!
-  endsAt: Time
   createdAt: Time!
   inviters: [Invite!]
   type: EventType!
   privacy: EventPrivacy
+  image: String!
 }
 
 type EventPrivacy {
@@ -77,10 +76,9 @@ input CreateEventInput {
   title: String!
   description: String!
   location: [Float]!
-  startsAt: Time!
-  endsAt: Time
   inviters: [InviteInput!]
   type: EventType!
+  image: String!
 }
 
 input RemoveEventInput {
@@ -92,10 +90,9 @@ input UpdateEventInput {
   title: String
   description: String
   location: [Float]
-  startsAt: Time
-  endsAt: Time
   inviters: [InviteInput!]
   type: EventType
+  image: String!
 }
 
 input UpdatePostInput {

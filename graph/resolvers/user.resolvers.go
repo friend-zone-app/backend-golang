@@ -74,6 +74,11 @@ func (r *mutationResolver) ValidateOtp(ctx context.Context, code string, email s
 			Username:    strings.ToLower(uniqueUsername),
 			Email:       email,
 			CreatedAt:   time.Now(),
+			Events:      []primitive.ObjectID{},
+			Posts:       []primitive.ObjectID{},
+			FriendsReq:  []*customTypes.FriendReq{},
+			FriendList:  []primitive.ObjectID{},
+			Badges:      []*customTypes.Badge{},
 			Setting: &customTypes.Setting{
 				Privacy: &customTypes.Privacy{
 					ShareLocation:  customTypes.UserPrivacyFriends,
@@ -229,8 +234,7 @@ func (r *mutationResolver) CreateEvent(ctx context.Context, createEvent customTy
 			Type:        "Point",
 			Coordinates: []float64{*createEvent.Location[0], *createEvent.Location[1]},
 		},
-		StartsAt:  createEvent.StartsAt,
-		EndsAt:    createEvent.EndsAt,
+		Image:     createEvent.Image,
 		Inviters:  inviters,
 		CreatedAt: time.Now(),
 		Type:      createEvent.Type,

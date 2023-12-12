@@ -75,12 +75,11 @@ type ComplexityRoot struct {
 		Author      func(childComplexity int) int
 		CreatedAt   func(childComplexity int) int
 		Description func(childComplexity int) int
-		EndsAt      func(childComplexity int) int
 		ID          func(childComplexity int) int
+		Image       func(childComplexity int) int
 		Inviters    func(childComplexity int) int
 		Location    func(childComplexity int) int
 		Privacy     func(childComplexity int) int
-		StartsAt    func(childComplexity int) int
 		Title       func(childComplexity int) int
 		Type        func(childComplexity int) int
 	}
@@ -401,19 +400,19 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Event.Description(childComplexity), true
 
-	case "Event.endsAt":
-		if e.complexity.Event.EndsAt == nil {
-			break
-		}
-
-		return e.complexity.Event.EndsAt(childComplexity), true
-
 	case "Event._id":
 		if e.complexity.Event.ID == nil {
 			break
 		}
 
 		return e.complexity.Event.ID(childComplexity), true
+
+	case "Event.image":
+		if e.complexity.Event.Image == nil {
+			break
+		}
+
+		return e.complexity.Event.Image(childComplexity), true
 
 	case "Event.inviters":
 		if e.complexity.Event.Inviters == nil {
@@ -435,13 +434,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Event.Privacy(childComplexity), true
-
-	case "Event.startsAt":
-		if e.complexity.Event.StartsAt == nil {
-			break
-		}
-
-		return e.complexity.Event.StartsAt(childComplexity), true
 
 	case "Event.title":
 		if e.complexity.Event.Title == nil {
@@ -1365,12 +1357,11 @@ type Event {
   title: String!
   description: String!
   location: Point!
-  startsAt: Time!
-  endsAt: Time
   createdAt: Time!
   inviters: [Invite!]
   type: EventType!
   privacy: EventPrivacy
+  image: String!
 }
 
 type EventPrivacy {
@@ -1437,10 +1428,9 @@ input CreateEventInput {
   title: String!
   description: String!
   location: [Float]!
-  startsAt: Time!
-  endsAt: Time
   inviters: [InviteInput!]
   type: EventType!
+  image: String!
 }
 
 input RemoveEventInput {
@@ -1452,10 +1442,9 @@ input UpdateEventInput {
   title: String
   description: String
   location: [Float]
-  startsAt: Time
-  endsAt: Time
   inviters: [InviteInput!]
   type: EventType
+  image: String!
 }
 
 input UpdatePostInput {
@@ -3048,91 +3037,6 @@ func (ec *executionContext) fieldContext_Event_location(ctx context.Context, fie
 	return fc, nil
 }
 
-func (ec *executionContext) _Event_startsAt(ctx context.Context, field graphql.CollectedField, obj *customTypes.Event) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Event_startsAt(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.StartsAt, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(time.Time)
-	fc.Result = res
-	return ec.marshalNTime2timeᚐTime(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Event_startsAt(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Event",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Time does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Event_endsAt(ctx context.Context, field graphql.CollectedField, obj *customTypes.Event) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Event_endsAt(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.EndsAt, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*time.Time)
-	fc.Result = res
-	return ec.marshalOTime2ᚖtimeᚐTime(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Event_endsAt(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Event",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Time does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _Event_createdAt(ctx context.Context, field graphql.CollectedField, obj *customTypes.Event) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Event_createdAt(ctx, field)
 	if err != nil {
@@ -3312,6 +3216,50 @@ func (ec *executionContext) fieldContext_Event_privacy(ctx context.Context, fiel
 				return ec.fieldContext_EventPrivacy_whoCanSee(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type EventPrivacy", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Event_image(ctx context.Context, field graphql.CollectedField, obj *customTypes.Event) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Event_image(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Image, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Event_image(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Event",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -5590,10 +5538,6 @@ func (ec *executionContext) fieldContext_Mutation_createEvent(ctx context.Contex
 				return ec.fieldContext_Event_description(ctx, field)
 			case "location":
 				return ec.fieldContext_Event_location(ctx, field)
-			case "startsAt":
-				return ec.fieldContext_Event_startsAt(ctx, field)
-			case "endsAt":
-				return ec.fieldContext_Event_endsAt(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_Event_createdAt(ctx, field)
 			case "inviters":
@@ -5602,6 +5546,8 @@ func (ec *executionContext) fieldContext_Mutation_createEvent(ctx context.Contex
 				return ec.fieldContext_Event_type(ctx, field)
 			case "privacy":
 				return ec.fieldContext_Event_privacy(ctx, field)
+			case "image":
+				return ec.fieldContext_Event_image(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Event", field.Name)
 		},
@@ -5764,10 +5710,6 @@ func (ec *executionContext) fieldContext_Mutation_updateEvent(ctx context.Contex
 				return ec.fieldContext_Event_description(ctx, field)
 			case "location":
 				return ec.fieldContext_Event_location(ctx, field)
-			case "startsAt":
-				return ec.fieldContext_Event_startsAt(ctx, field)
-			case "endsAt":
-				return ec.fieldContext_Event_endsAt(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_Event_createdAt(ctx, field)
 			case "inviters":
@@ -5776,6 +5718,8 @@ func (ec *executionContext) fieldContext_Mutation_updateEvent(ctx context.Contex
 				return ec.fieldContext_Event_type(ctx, field)
 			case "privacy":
 				return ec.fieldContext_Event_privacy(ctx, field)
+			case "image":
+				return ec.fieldContext_Event_image(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Event", field.Name)
 		},
@@ -7152,10 +7096,6 @@ func (ec *executionContext) fieldContext_Query_getUserEvents(ctx context.Context
 				return ec.fieldContext_Event_description(ctx, field)
 			case "location":
 				return ec.fieldContext_Event_location(ctx, field)
-			case "startsAt":
-				return ec.fieldContext_Event_startsAt(ctx, field)
-			case "endsAt":
-				return ec.fieldContext_Event_endsAt(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_Event_createdAt(ctx, field)
 			case "inviters":
@@ -7164,6 +7104,8 @@ func (ec *executionContext) fieldContext_Query_getUserEvents(ctx context.Context
 				return ec.fieldContext_Event_type(ctx, field)
 			case "privacy":
 				return ec.fieldContext_Event_privacy(ctx, field)
+			case "image":
+				return ec.fieldContext_Event_image(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Event", field.Name)
 		},
@@ -7251,10 +7193,6 @@ func (ec *executionContext) fieldContext_Query_getUserEventById(ctx context.Cont
 				return ec.fieldContext_Event_description(ctx, field)
 			case "location":
 				return ec.fieldContext_Event_location(ctx, field)
-			case "startsAt":
-				return ec.fieldContext_Event_startsAt(ctx, field)
-			case "endsAt":
-				return ec.fieldContext_Event_endsAt(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_Event_createdAt(ctx, field)
 			case "inviters":
@@ -7263,6 +7201,8 @@ func (ec *executionContext) fieldContext_Query_getUserEventById(ctx context.Cont
 				return ec.fieldContext_Event_type(ctx, field)
 			case "privacy":
 				return ec.fieldContext_Event_privacy(ctx, field)
+			case "image":
+				return ec.fieldContext_Event_image(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Event", field.Name)
 		},
@@ -7350,10 +7290,6 @@ func (ec *executionContext) fieldContext_Query_getLocalEvent(ctx context.Context
 				return ec.fieldContext_Event_description(ctx, field)
 			case "location":
 				return ec.fieldContext_Event_location(ctx, field)
-			case "startsAt":
-				return ec.fieldContext_Event_startsAt(ctx, field)
-			case "endsAt":
-				return ec.fieldContext_Event_endsAt(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_Event_createdAt(ctx, field)
 			case "inviters":
@@ -7362,6 +7298,8 @@ func (ec *executionContext) fieldContext_Query_getLocalEvent(ctx context.Context
 				return ec.fieldContext_Event_type(ctx, field)
 			case "privacy":
 				return ec.fieldContext_Event_privacy(ctx, field)
+			case "image":
+				return ec.fieldContext_Event_image(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Event", field.Name)
 		},
@@ -7455,10 +7393,6 @@ func (ec *executionContext) fieldContext_Query_getEvent(ctx context.Context, fie
 				return ec.fieldContext_Event_description(ctx, field)
 			case "location":
 				return ec.fieldContext_Event_location(ctx, field)
-			case "startsAt":
-				return ec.fieldContext_Event_startsAt(ctx, field)
-			case "endsAt":
-				return ec.fieldContext_Event_endsAt(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_Event_createdAt(ctx, field)
 			case "inviters":
@@ -7467,6 +7401,8 @@ func (ec *executionContext) fieldContext_Query_getEvent(ctx context.Context, fie
 				return ec.fieldContext_Event_type(ctx, field)
 			case "privacy":
 				return ec.fieldContext_Event_privacy(ctx, field)
+			case "image":
+				return ec.fieldContext_Event_image(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Event", field.Name)
 		},
@@ -10659,7 +10595,7 @@ func (ec *executionContext) unmarshalInputCreateEventInput(ctx context.Context, 
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"title", "description", "location", "startsAt", "endsAt", "inviters", "type"}
+	fieldsInOrder := [...]string{"title", "description", "location", "inviters", "type", "image"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -10693,24 +10629,6 @@ func (ec *executionContext) unmarshalInputCreateEventInput(ctx context.Context, 
 				return it, err
 			}
 			it.Location = data
-		case "startsAt":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("startsAt"))
-			data, err := ec.unmarshalNTime2timeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.StartsAt = data
-		case "endsAt":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("endsAt"))
-			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.EndsAt = data
 		case "inviters":
 			var err error
 
@@ -10729,6 +10647,15 @@ func (ec *executionContext) unmarshalInputCreateEventInput(ctx context.Context, 
 				return it, err
 			}
 			it.Type = data
+		case "image":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("image"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Image = data
 		}
 	}
 
@@ -11111,7 +11038,7 @@ func (ec *executionContext) unmarshalInputUpdateEventInput(ctx context.Context, 
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"eventId", "title", "description", "location", "startsAt", "endsAt", "inviters", "type"}
+	fieldsInOrder := [...]string{"eventId", "title", "description", "location", "inviters", "type", "image"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -11154,24 +11081,6 @@ func (ec *executionContext) unmarshalInputUpdateEventInput(ctx context.Context, 
 				return it, err
 			}
 			it.Location = data
-		case "startsAt":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("startsAt"))
-			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.StartsAt = data
-		case "endsAt":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("endsAt"))
-			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.EndsAt = data
 		case "inviters":
 			var err error
 
@@ -11190,6 +11099,15 @@ func (ec *executionContext) unmarshalInputUpdateEventInput(ctx context.Context, 
 				return it, err
 			}
 			it.Type = data
+		case "image":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("image"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Image = data
 		}
 	}
 
@@ -11579,13 +11497,6 @@ func (ec *executionContext) _Event(ctx context.Context, sel ast.SelectionSet, ob
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "startsAt":
-			out.Values[i] = ec._Event_startsAt(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "endsAt":
-			out.Values[i] = ec._Event_endsAt(ctx, field, obj)
 		case "createdAt":
 			out.Values[i] = ec._Event_createdAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -11600,6 +11511,11 @@ func (ec *executionContext) _Event(ctx context.Context, sel ast.SelectionSet, ob
 			}
 		case "privacy":
 			out.Values[i] = ec._Event_privacy(ctx, field, obj)
+		case "image":
+			out.Values[i] = ec._Event_image(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
